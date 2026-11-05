@@ -1,0 +1,1206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="BrandBay: one portal for a brand's marketing, social media managers and influencer shoots.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23D63A6E'/%3E%3Ctext x='16' y='22' font-size='16' font-family='Arial' font-weight='700' fill='white' text-anchor='middle'%3EB%3C/text%3E%3C/svg%3E">
+<title>BrandBay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-family:system-ui,sans-serif}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: sticky top bar; logged-in app = left sidebar nav + main work column; collapses to a scrolling tab strip on phones */
+:root{
+  --bg:#F5F5F9; --surface:#FFFFFF; --sunk:#ECECF3; --ink:#17152B; --muted:#5F5C78; --line:#DCDBE7;
+  --accent:#D63A6E; --accent-ink:#FFFFFF; --accent-soft:#FBE3EC;
+  --violet:#5B44C9; --violet-soft:#E8E4FA;
+  --ok:#1D8A5B; --ok-soft:#DDF3E8; --warn:#B26A00; --warn-soft:#FBEFD9; --info:#2363B8; --info-soft:#E0ECFA; --bad:#C0392B; --bad-soft:#FBE4E1;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121120; --surface:#1B1A2C; --sunk:#242338; --ink:#EEEDF7; --muted:#A3A0BE; --line:#33314A;
+  --accent:#F0679A; --accent-ink:#1A0B12; --accent-soft:#3D1D2B; --violet:#A797FF; --violet-soft:#2B2650;
+  --ok:#5BD39B; --ok-soft:#173527; --warn:#F2B259; --warn-soft:#3A2B12; --info:#7FB2F5; --info-soft:#18294A; --bad:#FF8A7A; --bad-soft:#3E1C19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121120; --surface:#1B1A2C; --sunk:#242338; --ink:#EEEDF7; --muted:#A3A0BE; --line:#33314A;
+  --accent:#F0679A; --accent-ink:#1A0B12; --accent-soft:#3D1D2B; --violet:#A797FF; --violet-soft:#2B2650;
+  --ok:#5BD39B; --ok-soft:#173527; --warn:#F2B259; --warn-soft:#3A2B12; --info:#7FB2F5; --info-soft:#18294A; --bad:#FF8A7A; --bad-soft:#3E1C19; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3,h4{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.muted{color:var(--muted)} .mono{font-family:var(--mono);font-size:12px} .num{font-variant-numeric:tabular-nums}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:8;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:10px;padding-block:10px}
+.logo{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;background:none;border:0;padding:0;cursor:pointer;flex:none}
+.logo i{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 200deg,var(--accent),var(--violet),var(--accent));display:inline-block}
+.spacer{flex:1}
+.search{position:relative;flex:1;max-width:380px;min-width:0}
+.search input{width:100%;background:var(--sunk);border:1px solid transparent;border-radius:10px;padding:8px 12px}
+.search input:focus{border-color:var(--line);background:var(--surface)}
+.pop{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(20,15,40,.14);z-index:9;min-width:300px;max-width:calc(100vw - 32px);max-height:420px;overflow:auto;padding:6px}
+.search .pop{left:0;right:auto;width:100%}
+.pop button.res{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:8px 10px;cursor:pointer}
+.pop button.res:hover{background:var(--sunk)}
+.pop .hdr{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:8px 10px 4px}
+.iconbtn{position:relative;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:grid;place-items:center;flex:none}
+.iconbtn svg{width:18px;height:18px;stroke:var(--ink);fill:none;stroke-width:1.8}
+.dot{position:absolute;top:-5px;right:-5px;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:700;border-radius:999px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px}
+.relwrap{position:relative;flex:none}
+.notif{padding:10px;border-radius:8px;display:grid;gap:2px;cursor:pointer;background:none;border:0;text-align:left;width:100%}
+.notif:hover{background:var(--sunk)}
+.notif.unread{background:var(--accent-soft)}
+.notif small{color:var(--muted);font-size:12px}
+.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--violet));flex:none;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;border:0;cursor:pointer}
+.av.lg{width:52px;height:52px;font-size:17px;cursor:default}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.small{padding:6px 10px;font-size:13px;border-radius:8px}
+.btn.ghost{background:transparent}
+.btn.okb{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.btn.badb{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* home */
+.hero{padding-block:56px 32px;display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:center}
+.hero h1{font-size:clamp(34px,5.4vw,60px);font-weight:800;letter-spacing:-.03em}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p{color:var(--muted);font-size:18px;max-width:52ch;margin:18px 0 26px}
+.ctas{display:flex;gap:10px;flex-wrap:wrap}
+.phone{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:16px;display:grid;gap:12px;max-width:380px;justify-self:end;width:100%}
+.row{display:flex;align-items:center;gap:10px}
+.grid9{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.grid9 span{aspect-ratio:1;border-radius:6px;background:var(--sunk)}
+.grid9 span:nth-child(3n+1){background:var(--accent-soft)} .grid9 span:nth-child(4n){background:var(--violet-soft)}
+.metric{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.metric b{font-family:var(--mono);color:var(--ink);font-weight:500}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding-block:12px 40px}
+.role{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:10px}
+.role h3{font-size:22px}
+.role p{color:var(--muted);flex:1}
+.role ul{margin:0;padding-left:18px;color:var(--muted);font-size:14px}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;width:max-content;white-space:nowrap}
+.t-biz{background:var(--accent-soft);color:var(--accent)} .t-pro{background:var(--violet-soft);color:var(--violet)} .t-emp{background:var(--info-soft);color:var(--info)}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding-block:12px 40px}
+.flow div{border-top:2px solid var(--line);padding-top:12px}
+.flow b{display:block;font-family:var(--display);font-size:17px}
+.flow span{color:var(--muted);font-size:14px}
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding-block:12px 64px}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:8px;align-content:start}
+.plan.feat{border-color:var(--accent)}
+.plan .price{font-family:var(--display);font-size:30px;font-weight:800}
+.plan .price small{font-size:14px;color:var(--muted);font-weight:500;font-family:var(--body)}
+.plan ul{margin:0;padding-left:18px;color:var(--muted);font-size:14px}
+
+/* forms */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;min-width:0}
+.auth{max-width:580px;margin:40px auto 64px}
+.auth h2{font-size:30px;margin-bottom:6px}
+.sub{color:var(--muted);margin:0 0 20px}
+.field{display:grid;gap:6px;margin-bottom:14px;min-width:0}
+.field>label,.flabel{font-size:13px;font-weight:600}
+.field input:not([type=checkbox]):not([type=radio]):not([type=color]),.field select,.field textarea,.inp{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.field textarea,textarea.inp{min-height:84px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.pick label{border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;font-weight:600;font-size:14px;display:grid;gap:2px;position:relative}
+.pick label small{font-weight:400;color:var(--muted);font-size:12px}
+.pick input{position:absolute;opacity:0;pointer-events:none}
+.pick label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.pick label:has(input:focus-visible){outline:2px solid var(--accent)}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
+.checks label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.err{color:var(--bad);font-size:13px;min-height:18px}
+.demo-accts{display:grid;gap:8px}
+.demo-accts button{display:flex;align-items:center;gap:10px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer}
+.demo-accts button:hover{border-color:var(--accent)}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:18px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* app shell */
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;padding-block:24px 64px;align-items:start}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);display:grid;gap:2px}
+.side .me{display:flex;gap:10px;align-items:center;padding:6px 8px 14px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.side .me b{display:block;font-size:14px;line-height:1.2}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:8px;background:none;border:0;border-radius:10px;padding:9px 12px;font-weight:600;color:var(--muted);cursor:pointer;text-align:left;width:100%}
+.nav:hover{background:var(--sunk);color:var(--ink)}
+.nav[aria-current="page"]{background:var(--ink);color:var(--bg)}
+.nav .cnt{font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 7px}
+.main{display:grid;gap:20px;min-width:0}
+.dhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.dhead h2{font-size:28px;letter-spacing:-.02em}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
+.stat small{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.stat b{display:block;font-family:var(--mono);font-weight:500;font-size:22px;font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere}
+.stat span{font-size:12px;color:var(--muted)}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.card h3{font-size:18px;margin-bottom:14px}
+.card .chead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.card .chead h3{margin:0}
+.list{display:grid;gap:10px}
+.item{border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:8px;background:var(--bg);min-width:0}
+.item.click{cursor:pointer}
+.item.click:hover{border-color:var(--muted)}
+.hd{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.meta{font-size:13px;color:var(--muted);display:flex;gap:4px 12px;flex-wrap:wrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12px;padding:2px 8px;border-radius:6px;background:var(--sunk);color:var(--muted)}
+.status{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.s-Submitted,.s-Pending,.s-Due,.s-Unverified{background:var(--warn-soft);color:var(--warn)}
+.s-Research,.s-Content,.s-Scheduled{background:var(--info-soft);color:var(--info)}
+.s-Live,.s-Approved,.s-Paid,.s-Active,.s-Posted{background:var(--ok-soft);color:var(--ok)}
+.s-Changes,.s-Suspended,.s-Overdue{background:var(--bad-soft);color:var(--bad)}
+.pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.pipe span{height:5px;border-radius:3px;background:var(--line)}
+.pipe span.on{background:var(--accent)}
+.pipe-l{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;color:var(--muted)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.actions select,.tsel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:13px;max-width:100%}
+.empty{color:var(--muted);font-size:14px;padding:22px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.linkbtn{background:none;border:0;padding:0;font-weight:700;cursor:pointer;text-align:left;color:var(--ink)}
+.linkbtn:hover{color:var(--accent)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar .inp{width:auto;flex:1;min-width:160px;padding:8px 12px}
+.toolbar select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;z-index:20;max-width:calc(100vw - 32px)}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.kv div{display:grid;gap:2px}
+.kv small{font-size:12px;color:var(--muted);font-weight:600}
+.stars{color:var(--warn);letter-spacing:1px}
+.starpick{display:flex;gap:4px}
+.starpick button{background:none;border:0;font-size:24px;cursor:pointer;color:var(--line);padding:0 2px}
+.starpick button.on{color:var(--warn)}
+.bar{display:grid;grid-template-columns:110px minmax(0,1fr) 72px;gap:10px;align-items:center;font-size:13px}
+.bar .track{height:10px;background:var(--sunk);border-radius:5px;overflow:hidden}
+.bar .fill{height:100%;background:var(--accent);border-radius:5px}
+.bar b{font-family:var(--mono);font-weight:500;text-align:right;font-size:12px}
+.chart svg{width:100%;height:auto;display:block}
+.score{font-family:var(--mono);font-size:12px;font-weight:500;padding:2px 8px;border-radius:6px;background:var(--ok-soft);color:var(--ok)}
+
+/* draft preview */
+.draft{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px}
+.thumb{aspect-ratio:1;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;max-width:100%}
+.th-Post{background:linear-gradient(135deg,var(--accent),#F29E6B)} .th-Reel{background:linear-gradient(135deg,var(--violet),var(--accent))} .th-Story{background:linear-gradient(135deg,#2C9C8A,var(--violet))}
+.caption{white-space:pre-wrap;font-size:14px}
+.feedback{font-size:13px;background:var(--bad-soft);color:var(--bad);border-radius:8px;padding:8px 10px}
+
+/* chat */
+.chat{display:grid;grid-template-columns:260px minmax(0,1fr);gap:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface);min-height:460px}
+.threads{border-right:1px solid var(--line);overflow:auto;max-height:560px}
+.thread{display:grid;gap:2px;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;cursor:pointer;width:100%}
+.thread[aria-current="true"]{background:var(--sunk)}
+.thread small{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.convo{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-width:0}
+.convo .ch{padding:12px 16px;border-bottom:1px solid var(--line)}
+.msgs{padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto;max-height:420px}
+.msg{max-width:78%;display:grid;gap:2px}
+.msg .bub{background:var(--sunk);padding:8px 12px;border-radius:12px 12px 12px 4px;font-size:14px;overflow-wrap:anywhere}
+.msg.mine{align-self:flex-end}
+.msg.mine .bub{background:var(--accent);color:var(--accent-ink);border-radius:12px 12px 4px 12px}
+.msg small{font-size:11px;color:var(--muted)}
+.msg.mine small{text-align:right}
+.compose{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+.compose input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+
+/* calendar */
+.calwrap{overflow-x:auto}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(88px,1fr));gap:4px;min-width:640px}
+.cal .dow{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 6px}
+.cal .day{min-height:96px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px;display:grid;align-content:start;gap:4px}
+.cal .day.other{opacity:.45}
+.cal .day.today{border-color:var(--accent)}
+.cal .day .n{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.cal .ev{font-size:11px;font-weight:600;border-radius:5px;padding:2px 5px;border:0;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.ev-Post{background:var(--accent-soft);color:var(--accent)} .ev-Reel{background:var(--violet-soft);color:var(--violet)} .ev-Story{background:var(--info-soft);color:var(--info)}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches input[type=color]{width:46px;height:40px;border:1px solid var(--line);border-radius:10px;padding:2px;background:var(--bg);cursor:pointer}
+.out{display:grid;gap:10px}
+.out .item p{white-space:pre-wrap}
+.feed{display:grid;gap:0}
+.feed div{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.feed div:last-child{border-bottom:0}
+.feed i{width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:7px}
+.feed small{color:var(--muted);font-size:12px;display:block}
+
+.t-inf{background:var(--ok-soft);color:var(--ok)}
+.s-Requested{background:var(--warn-soft);color:var(--warn)} .s-Accepted{background:var(--info-soft);color:var(--info)}
+.s-Uploaded{background:var(--violet-soft);color:var(--violet)} .s-Reshoot,.s-Declined,.s-Cancelled{background:var(--bad-soft);color:var(--bad)}
+.s-Connected{background:var(--ok-soft);color:var(--ok)} .s-Off{background:var(--sunk);color:var(--muted)}
+.ev-Shoot{background:var(--ok-soft);color:var(--ok)} .ev-Own{background:var(--warn-soft);color:var(--warn)}
+.icards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.icard{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--bg);display:grid;gap:10px;align-content:start;min-width:0}
+.icard .row b{display:block;line-height:1.2}
+.icard dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:13px}
+.icard dt{color:var(--muted)} .icard dd{margin:0;text-align:right;font-family:var(--mono);font-size:12px}
+.social{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.plat{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--bg);display:grid;gap:8px;align-content:start}
+.plat .big{font-family:var(--mono);font-size:22px}
+.plat .up{color:var(--ok);font-size:12px;font-weight:700}
+.pl-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex:none}
+.next{background:linear-gradient(135deg,var(--accent),var(--violet));color:#fff;border-radius:16px;padding:20px;display:grid;gap:6px}
+.next .label{color:rgba(255,255,255,.8)}
+.next h3{font-size:22px;color:#fff}
+.next p{opacity:.92}
+.teamhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.urlpill{font-family:var(--mono);font-size:12px;background:var(--sunk);border-radius:6px;padding:3px 8px;color:var(--muted)}
+.uplink{color:var(--info);font-weight:600;overflow-wrap:anywhere}
+.legal{max-width:720px;margin:32px auto 56px;line-height:1.65}
+.legal h1{font-size:34px;margin-bottom:6px}
+.legal h2{font-size:19px;margin:26px 0 8px}
+.legal p,.legal li{color:var(--ink)}
+.legal p{margin:8px 0}
+.legal ul{padding-left:20px;margin:6px 0;display:grid;gap:6px}
+.legal a,.foot a,label a{color:var(--accent)}
+.draftnote{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:14px}
+mark.ph{background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:0 4px;font-weight:600}
+.foot{border-top:1px solid var(--line);padding-block:18px;font-size:13px;color:var(--muted)}
+.foot .wrap{display:flex;gap:18px;flex-wrap:wrap}
+@media (max-width:980px){
+  .shell{grid-template-columns:1fr;gap:16px;padding-top:12px}
+  .side{position:static;display:flex;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .side .me{display:none}
+  .nav{width:auto;flex:none;white-space:nowrap;border:1px solid var(--line)}
+  .cols,.cols2{grid-template-columns:1fr}
+}
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;padding-block:36px 24px}.phone{justify-self:start}
+  .roles,.flow,.plans{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .chat{grid-template-columns:1fr}.threads{max-height:180px;border-right:0;border-bottom:1px solid var(--line)}
+}
+@media (max-width:600px){
+  .roles,.flow,.plans,.two,.three,.pick{grid-template-columns:1fr}
+  .search{display:none}
+  .draft{grid-template-columns:64px minmax(0,1fr)}
+  .bar{grid-template-columns:80px minmax(0,1fr) 64px}
+  .top .hide-sm{display:none}
+}
+@media (prefers-reduced-motion:no-preference){.item,.role,.nav{transition:border-color .15s,background .15s}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap" id="topbar"></div></header>
+<main id="app"></main>
+<footer class="foot"><div class="wrap"><span>© 2026 BrandBay</span><a href="#terms">Terms of Use</a><a href="#privacy">Privacy Policy</a><a href="#team">Team login</a></div></footer>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ================= DATA ================= */
+const ROLES={business:"Business",pro:"Social Media Manager",influencer:"Influencer",employee:"Employee"};
+const roleTag=r=>({business:"t-biz",pro:"t-pro",influencer:"t-inf",employee:"t-emp"})[r]||"t-emp";
+const INFCATS=["Food","Fitness","Fashion","Lifestyle","Travel","Tech"];
+const CITIES=["Hyderabad","Bengaluru","Mumbai","Chennai","Pune"];
+const DELIVERABLES=["Instagram Reel","Instagram Post","Story set","YouTube video"];
+const SOCIALS={"Instagram":"#D63A6E","Facebook":"#2363B8","YouTube":"#C0392B","LinkedIn":"#0A66C2","X (Twitter)":"#17152B","Google Business":"#1D8A5B"};
+const TEAM_URL="brandbay.in/team";
+const STAGES=["Submitted","Research","Content","Live"];
+const PLATFORMS=["Instagram","Facebook","YouTube","LinkedIn","X (Twitter)","Google Ads","WhatsApp"];
+const SERVICES=["Market research","Content creation","Post scheduling","Paid ads","Reels / video","Influencer outreach","Competitor analysis","Community replies"];
+const PACKAGES={Starter:{price:15000,desc:"8 posts a month, 1 platform, basic report"},Growth:{price:35000,desc:"16 posts + 4 reels, 2 platforms, ads setup, weekly report"},Pro:{price:75000,desc:"Daily content, all platforms, research, influencers, ads management"},Custom:{price:0,desc:"Set your own budget and scope"}};
+const INDUSTRY_KEYS={"Food & Café":["food","lifestyle","restaurant"],"Fashion":["fashion","style","lifestyle"],"Fitness":["fitness","video","health"],"Real estate":["real estate","video","property"],"Education":["education","explainer","video"],"Salon & Beauty":["beauty","fashion","lifestyle"],"Other":["general"]};
+
+const DAY=86400000;
+const iso=(off=0)=>{const d=new Date(Date.now()+off*DAY);return d.toISOString().slice(0,10)};
+const ts=(offMin=0)=>new Date(Date.now()+offMin*60000).toISOString();
+
+/* ================= LIVE DATA (Supabase) ================= */
+const SB_URL="https://wmyztofammiyhklyhyoa.supabase.co";
+const SB_KEY="sb_publishable_X6eF6Arf--zYRG3xGmLKAQ_t0d21mdI";
+// A password-reset email link opens the site with "type=recovery" in the address. Note it before Supabase reads and clears it.
+const RECOVERY=/type=recovery/.test(location.hash);
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
+const blank=()=>({users:[],requests:[],drafts:[],messages:[],invoices:[],reviews:[],brandkits:{},socials:{},posts:[],bookings:[],notifs:[],activity:[],current:null});
+let S=blank(),profile=null,booted=false,live=null;
+const save=()=>{};
+const dOnly=t=>t?String(t).slice(0,10):"";
+const hm=t=>t?String(t).slice(0,5):"";
+async function q(p){const {data,error}=await p;if(error)throw error;return data}
+function friendly(e){const m=(e&&(e.message||e.error_description))||"";
+  if(/row-level security|permission denied/i.test(m))return "You don't have permission to do that.";
+  if(/Failed to fetch|NetworkError|network/i.test(m))return "Can't reach BrandBay right now. Check your internet and try again.";
+  return m||"Something went wrong. Please try again."}
+function mapProfile(p){return{id:p.id,name:p.name,email:p.email||"",phone:p.phone||"",role:p.role,status:p.status,company:p.company,industry:p.industry,address:p.address,handle:p.handle,followers:p.followers,rate:p.rate,bio:p.bio,niche:p.niche,category:p.category,city:p.city,dept:p.dept,joined:dOnly(p.created_at)}}
+
+async function loadAll(){
+  const uid=S.current;if(!uid){S=blank();return}
+  const staff=profile&&profile.role==="employee"&&profile.status==="Active";
+  const [people,camps,drafts,msgs,invs,revs,kits,socs,posts,bks,notifs,acts]=await Promise.all([
+    q(sb.from(staff?"profiles":"directory").select("*")),
+    q(sb.from("campaigns").select("*")),
+    q(sb.from("drafts").select("*").order("id")),
+    q(sb.from("messages").select("*").order("id")),
+    q(sb.from("invoices").select("*")),
+    q(sb.from("reviews").select("*")),
+    q(sb.from("brand_kits").select("*")),
+    q(sb.from("social_accounts").select("*")),
+    q(sb.from("posts").select("*").order("id")),
+    q(sb.from("bookings").select("*")),
+    q(sb.from("notifications").select("*").order("id",{ascending:false}).limit(50)),
+    q(sb.from("activity").select("*").order("id",{ascending:false}).limit(200))
+  ]);
+  const ref=new Map(camps.map(c=>[c.id,c.ref]));
+  const N={...blank(),current:uid};
+  N.users=people.map(mapProfile).filter(u=>u.id!==uid);
+  if(profile)N.users.push(mapProfile(profile));
+  N.requests=camps.map(c=>({id:c.ref,dbid:c.id,biz:c.business_id,pro:c.manager_id,title:c.title,goal:c.goal||"—",audience:c.audience||"",pkg:c.package,platforms:c.platforms||[],services:c.services||[],budget:c.budget,stage:c.stage,created:dOnly(c.created_at),deadline:c.deadline||dOnly(c.created_at),notes:c.notes||"",research:Object.assign({audience:"",competitors:"",hashtags:""},c.research||{})}));
+  N.drafts=drafts.map(d=>({id:"D"+d.id,dbid:d.id,req:ref.get(d.campaign_id),pro:d.manager_id,type:d.type,platform:d.platform,caption:d.caption,hashtags:d.hashtags||"",date:d.post_date,status:d.status,feedback:d.feedback||""}));
+  N.messages=msgs.map(m=>({req:ref.get(m.campaign_id),from:m.sender_id,text:m.body,at:m.created_at}));
+  N.invoices=invs.map(i=>({id:i.ref,dbid:i.id,req:ref.get(i.campaign_id),biz:i.business_id,amount:i.amount,status:i.status,due:i.due}));
+  N.reviews=revs.map(r=>({req:ref.get(r.campaign_id)||"",pro:r.manager_id,biz:r.business_id,stars:r.stars,text:r.body||"",at:dOnly(r.created_at)}));
+  kits.forEach(k=>N.brandkits[k.business_id]={tone:k.tone||"Friendly",colors:(k.colors&&k.colors.length?k.colors:["#D63A6E","#17152B","#FFFFFF"]),hashtags:k.hashtags||"",audience:k.audience||"",dos:k.dos||"",donts:k.donts||""});
+  socs.forEach(s=>{(N.socials[s.business_id]=N.socials[s.business_id]||{})[s.platform]=s.connected?{on:true,handle:s.handle||"",followers:s.followers||0,growth:s.growth||0}:{on:false}});
+  N.posts=posts.map(p=>({id:"P"+p.id,dbid:p.id,biz:p.business_id,platform:p.platform,type:p.type,caption:p.caption,hashtags:p.hashtags||"",date:p.post_date,time:hm(p.post_time),status:p.status}));
+  N.bookings=bks.map(b=>({id:b.ref,dbid:b.id,inf:b.influencer_id,biz:b.business_id,req:b.campaign_id?ref.get(b.campaign_id)||"":"",by:b.booked_by,date:b.shoot_date,time:hm(b.shoot_time),location:b.location,deliverable:b.deliverable,fee:b.fee,brief:b.brief||"",status:b.status,link:b.upload_link||"",path:b.upload_path||"",caption:b.caption||"",feedback:b.feedback||"",created:dOnly(b.created_at)}));
+  N.notifs=notifs.map(n=>({dbid:n.id,to:n.user_id,text:n.body,link:n.link||"overview",at:n.created_at,read:n.read}));
+  N.activity=acts.map(a=>({req:a.campaign_id?ref.get(a.campaign_id):undefined,by:a.actor_id,text:a.body,at:a.created_at}));
+  S=N;
+}
+async function refresh(){try{await loadAll();render()}catch(e){console.error(e);toast(friendly(e))}}
+/* run a write, reload everything, re-render. Returns true when it worked. */
+async function run(fn,ok){try{await fn();await loadAll();if(ok)toast(ok);render();return true}catch(e){console.error(e);toast(friendly(e));return false}}
+
+let liveT;
+function startLive(){stopLive();live=sb.channel("brandbay-"+S.current)
+  .on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:"user_id=eq."+S.current},()=>{clearTimeout(liveT);liveT=setTimeout(refresh,400)})
+  .on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},()=>{clearTimeout(liveT);liveT=setTimeout(refresh,400)})
+  .subscribe()}
+function stopLive(){if(live){sb.removeChannel(live);live=null}}
+
+async function startSession(uid){
+  profile=await q(sb.from("profiles").select("*").eq("id",uid).single());
+  S.current=uid;await loadAll();startLive();
+}
+async function endSession(){stopLive();await sb.auth.signOut();profile=null;S=blank()}
+
+/* ================= HELPERS ================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const user=id=>id?(S.users.find(u=>u.id===id)||{id,name:"Former user",role:"",status:"",handle:"",company:"",email:""}):undefined;
+const req=id=>S.requests.find(r=>r.id===id);
+const me=()=>S.current?S.users.find(u=>u.id===S.current):undefined;
+const rupee=n=>"₹"+Math.round(Number(n)||0).toLocaleString("en-IN");
+const initials=n=>String(n||"?").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
+const fdate=d=>{const x=new Date(d);return x.toLocaleDateString("en-IN",{day:"numeric",month:"short"})};
+const ago=t=>{const m=Math.round((Date.now()-new Date(t))/60000);if(m<1)return"just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<24)return h+" h ago";return Math.round(h/24)+" d ago"};
+const bizName=id=>{const b=user(id);return b?(b.company||b.name):"—"};
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2400)}
+function notify(){} /* notifications are created by the database */
+function log(){}
+const employees=()=>S.users.filter(u=>u.role==="employee").map(u=>u.id);
+function rating(proId){const rs=S.reviews.filter(r=>r.pro===proId);return rs.length?(rs.reduce((a,r)=>a+r.stars,0)/rs.length):0}
+const starStr=n=>"★".repeat(Math.round(n))+"☆".repeat(5-Math.round(n));
+function myReqs(){const u=me();if(!u)return[];if(u.role==="business")return S.requests.filter(r=>r.biz===u.id);if(u.role==="pro")return S.requests.filter(r=>r.pro===u.id);if(u.role==="influencer")return[];return S.requests}
+const bk=id=>S.bookings.find(b=>b.id===id);
+function myBookings(){const u=me();if(!u)return[];if(u.role==="business")return S.bookings.filter(b=>b.biz===u.id);if(u.role==="influencer")return S.bookings.filter(b=>b.inf===u.id);if(u.role==="pro")return S.bookings.filter(b=>b.by===u.id||req(b.req)?.pro===u.id);return S.bookings}
+function myPosts(){const u=me();if(!u)return[];if(u.role==="business")return S.posts.filter(p=>p.biz===u.id);if(u.role==="employee")return S.posts;return[]}
+const bkRoute=id=>{const r=user(id)?.role;return r==="influencer"||r==="employee"?"bookings":"influencers"};
+function notifyBk(ids,text){[].concat(ids).filter((v,i,a)=>v&&a.indexOf(v)===i).forEach(id=>notify(id,text,bkRoute(id)))}
+function infRating(id){const done=S.bookings.filter(b=>b.inf===id&&b.status==="Approved").length;return Math.min(5,4.2+done*0.2)}
+function canSee(r){const u=me();return u&&(u.role==="employee"||r.biz===u.id||r.pro===u.id)}
+function matchScore(p,r){const keys=INDUSTRY_KEYS[user(r.biz)?.industry]||["general"];const n=(p.niche||"").toLowerCase();let s=55;keys.forEach(k=>{if(n.includes(k))s+=15});if(r.services.includes("Reels / video")&&n.includes("video"))s+=8;s+=Math.round(rating(p.id)*3);return Math.min(s,98)}
+/* deterministic analytics per campaign */
+function rng(seedStr){let h=2166136261;for(const c of seedStr)h=Math.imul(h^c.charCodeAt(0),16777619);return()=>{h=Math.imul(h^(h>>>15),2246822507);h=Math.imul(h^(h>>>13),3266489909);return((h^=h>>>16)>>>0)/4294967296}}
+function analytics(r){return null; /* live stats arrive with the social media connection */
+  if(r.stage!=="Content"&&r.stage!=="Live")return null;
+  const R=rng(r.id),base=r.budget/12,days=14,reach=[];let v=base*(0.4+R()*0.3);
+  for(let i=0;i<days;i++){v=v*(1.02+R()*0.12)*(r.stage==="Live"?1.02:1);reach.push(Math.round(v))}
+  const total=reach.reduce((a,b)=>a+b,0);
+  return{reach,total,followers:Math.round(total*0.012),engagement:(3+R()*4).toFixed(1),clicks:Math.round(total*0.018),leads:Math.round(total*0.0025)}
+}
+
+/* ================= CHARTS ================= */
+function niceMax(m){if(m<=0)return 10;const p=Math.pow(10,Math.floor(Math.log10(m)));const n=m/p;return(n<=1?1:n<=2?2:n<=5?5:10)*p}
+function lineChart(series,labels){
+  const W=640,H=220,L=56,Rr=14,T=14,B=30,max=niceMax(Math.max(...series)),n=series.length;
+  const x=i=>L+(W-L-Rr)*(n===1?0:i/(n-1)),y=v=>T+(H-T-B)*(1-v/max);
+  const ticks=[0,.25,.5,.75,1].map(f=>f*max);
+  const pts=series.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const area=`${L},${y(0)} ${pts} ${x(n-1)},${y(0)}`;
+  const fmt=v=>v>=100000?(v/100000).toFixed(v%100000?1:0)+"L":v>=1000?(v/1000).toFixed(v%1000?1:0)+"K":Math.round(v);
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart of daily reach">
+    ${ticks.map(t=>`<line x1="${L}" x2="${W-Rr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${y(t)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="JetBrains Mono,monospace">${fmt(t)}</text>`).join("")}
+    <polygon points="${area}" fill="var(--accent)" fill-opacity=".12"/>
+    <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="${x(n-1)}" cy="${y(series[n-1])}" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+    ${labels.map((l,i)=>i%Math.ceil(n/7)===0||i===n-1?`<text x="${x(i)}" y="${H-8}" text-anchor="${i===0?"start":i===n-1?"end":"middle"}" font-size="11" fill="var(--muted)">${l}</text>`:"").join("")}
+  </svg></div>`}
+function bars(items,fmt=v=>v){const m=Math.max(1,...items.map(i=>i.value));return `<div class="list">${items.map(i=>`<div class="bar"><span>${esc(i.label)}</span><div class="track"><div class="fill" style="width:${(i.value/m*100).toFixed(1)}%;${i.color?`background:${i.color}`:""}"></div></div><b>${fmt(i.value)}</b></div>`).join("")}</div>`}
+const dayLabels=n=>Array.from({length:n},(_,i)=>fdate(Date.now()-(n-1-i)*DAY));
+
+/* ================= ROUTING ================= */
+let route=location.hash.slice(1)||"home";
+const ui={campFilter:"All",reqSearch:"",reqStage:"All",userRole:"All",mkSearch:"",mkPlat:"All",mkMin:0,thread:null,calMonth:null,proTab:"active",showNotif:false,showMenu:false,search:"",draftFor:null,changesFor:null,stars:5,regRole:"business",gen:null,infCat:"All",infCity:"All",bookFor:null,bookReq:null,uploadFor:null,reshootFor:null};
+function go(r){route=r;ui.showNotif=ui.showMenu=false;ui.search="";if(location.hash.slice(1)!==r)location.hash=r;render();window.scrollTo(0,0)}
+window.addEventListener("hashchange",()=>{const r=location.hash.slice(1)||"home";if(r!==route){route=r;render()}});
+
+const NAV={
+  business:[["overview","Overview"],["social","Social accounts"],["planner","Post planner"],["campaigns","My campaigns"],["new","New request"],["influencers","Influencers"],["approvals","Approvals"],["calendar","Content calendar"],["messages","Messages"],["billing","Billing"],["brandkit","Brand kit"],["settings","Settings"]],
+  pro:[["overview","Overview"],["market","Find campaigns"],["mywork","My campaigns"],["influencers","Influencers"],["studio","Caption helper"],["calendar","Content calendar"],["messages","Messages"],["earnings","Earnings"],["settings","Profile & reviews"]],
+  influencer:[["overview","Overview"],["bookings","My shoots"],["calendar","Shoot calendar"],["earnings","Earnings"],["settings","Profile"]],
+  employee:[["overview","Overview"],["requests","All requests"],["bookings","Influencer bookings"],["match","Manager matching"],["users","Users"],["calendar","Content calendar"],["messages","Messages"],["revenue","Revenue"],["activity","Activity log"],["settings","Settings"]]
+};
+function navCount(k){const u=me();
+  if(k==="approvals")return S.drafts.filter(d=>req(d.req)?.biz===u.id&&d.status==="Pending").length;
+  if(k==="market")return S.requests.filter(r=>!r.pro).length;
+  if(k==="match")return S.requests.filter(r=>!r.pro).length;
+  if(k==="users")return S.users.filter(x=>x.status==="Unverified").length;
+  if(k==="billing")return S.invoices.filter(i=>i.biz===u.id&&i.status==="Due").length;
+  if(k==="influencers")return myBookings().filter(b=>b.status==="Uploaded").length;
+  if(k==="bookings")return u.role==="influencer"?myBookings().filter(b=>b.status==="Requested"||b.status==="Reshoot").length:S.bookings.filter(b=>b.status==="Uploaded"||b.status==="Requested").length;
+  return 0}
+
+/* ================= TOP BAR ================= */
+const ICON={bell:'<svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+  moon:'<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+  sun:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'};
+function isDark(){const t=document.documentElement.dataset.theme;return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches}
+try{const t=localStorage.getItem("brandbay-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}
+
+function renderTop(){
+  const u=me();
+  let h=`<button class="logo" data-act="go" data-arg="${u?"overview":"home"}" type="button"><i></i>BrandBay</button>`;
+  if(u){
+    const mine=S.notifs.filter(n=>n.to===u.id),unread=mine.filter(n=>!n.read).length;
+    h+=`<div class="search"><input id="gsearch" placeholder="Search campaigns, people, invoices…" value="${esc(ui.search)}" autocomplete="off" aria-label="Search">${ui.search?searchResults():""}</div><span class="spacer"></span>
+    <button class="iconbtn" data-act="theme" type="button" aria-label="Switch theme">${isDark()?ICON.sun:ICON.moon}</button>
+    <div class="relwrap"><button class="iconbtn" data-act="bell" type="button" aria-label="Notifications">${ICON.bell}${unread?`<span class="dot">${unread}</span>`:""}</button>
+    ${ui.showNotif?`<div class="pop"><div class="row" style="justify-content:space-between;padding:6px 8px"><b>Notifications</b>${unread?`<button class="btn small ghost" data-act="readall" type="button">Mark all read</button>`:""}</div>
+      ${mine.length?mine.slice(0,12).map((n,i)=>`<button class="notif ${n.read?"":"unread"}" data-act="opennotif" data-arg="${S.notifs.indexOf(n)}" type="button"><span>${esc(n.text)}</span><small>${ago(n.at)}</small></button>`).join(""):`<div class="empty">You're all caught up.</div>`}</div>`:""}</div>
+    <div class="relwrap"><button class="av" data-act="menu" type="button" aria-label="Account menu">${initials(u.name)}</button>
+    ${ui.showMenu?`<div class="pop" style="min-width:260px"><div style="padding:8px 10px"><b>${esc(u.name)}</b><div class="muted" style="font-size:13px">${ROLES[u.role]} · ${esc(u.email)}</div></div>
+      <div style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px"><button class="res" data-act="go" data-arg="settings" type="button">Settings</button><button class="res" data-act="logout" type="button">Log out</button></div></div>`:""}</div>`;
+  }else{
+    if(route==="team")h+=`<span class="tag t-emp">Team</span>`;
+    h+=`<span class="spacer"></span><button class="iconbtn" data-act="theme" type="button" aria-label="Switch theme">${isDark()?ICON.sun:ICON.moon}</button><button class="btn small ghost" data-act="go" data-arg="login" type="button">Log in</button><button class="btn small primary" data-act="go" data-arg="register" type="button">Register</button>`;
+  }
+  $("#topbar").innerHTML=h;
+  const gs=$("#gsearch");
+  if(gs)gs.oninput=e=>{ui.search=e.target.value;const pos=e.target.selectionStart;renderTop();const n=$("#gsearch");n.focus();n.setSelectionRange(pos,pos)};
+}
+function searchResults(){
+  const q=ui.search.toLowerCase().trim(),u=me();
+  const camps=S.requests.filter(canSee).filter(r=>(r.title+" "+r.id+" "+bizName(r.biz)).toLowerCase().includes(q)).slice(0,6);
+  const people=u.role==="employee"?S.users.filter(x=>(x.name+" "+(x.company||"")+" "+(x.handle||"")).toLowerCase().includes(q)).slice(0,5):[];
+  const invs=S.invoices.filter(i=>u.role==="employee"||i.biz===u.id).filter(i=>i.id.toLowerCase().includes(q)).slice(0,4);
+  if(!camps.length&&!people.length&&!invs.length)return `<div class="pop"><div class="empty">No matches for "${esc(ui.search)}"</div></div>`;
+  return `<div class="pop">${camps.length?`<div class="hdr">Campaigns</div>`+camps.map(r=>`<button class="res" data-act="go" data-arg="c-${r.id}" type="button"><b>${esc(r.title)}</b> <span class="muted mono">${r.id}</span></button>`).join(""):""}
+  ${people.length?`<div class="hdr">People</div>`+people.map(x=>`<button class="res" data-act="go" data-arg="users" type="button">${esc(x.name)} <span class="muted">· ${ROLES[x.role]}</span></button>`).join(""):""}
+  ${invs.length?`<div class="hdr">Invoices</div>`+invs.map(i=>`<button class="res" data-act="go" data-arg="${u.role==="employee"?"revenue":"billing"}" type="button">${i.id} <span class="muted">· ${rupee(i.amount)} · ${i.status}</span></button>`).join(""):""}</div>`}
+
+/* ================= RENDER ================= */
+function render(){
+  const u=me();
+  if(u&&(route==="home"||route==="login"||route==="register"||route==="team"||route==="forgot"))route="overview";
+  renderTop();
+  const app=$("#app");
+  if(route==="terms")app.innerHTML=termsView();
+  else if(route==="privacy")app.innerHTML=privacyView();
+  else if(route==="reset")app.innerHTML=resetView();
+  else if(route==="forgot")app.innerHTML=forgotView();
+  else if(route==="login")app.innerHTML=loginView();
+  else if(route==="register")app.innerHTML=registerView();
+  else if(route==="team")app.innerHTML=teamView();
+  else if(!u)app.innerHTML=homeView();
+  else{
+    let body;
+    if(route.startsWith("c-")){const r=req(route.slice(2));body=r&&canSee(r)?detailView(r):`<div class="empty">This campaign doesn't exist or you don't have access to it.</div>`}
+    else{const fn=V[u.role+"_"+route]||V[route];body=fn?fn(u):V[u.role+"_overview"](u)}
+    const nav=NAV[u.role];
+    app.innerHTML=`<div class="wrap shell"><nav class="side" aria-label="Sections"><div class="me"><span class="av" style="cursor:default">${initials(u.name)}</span><div><b>${esc(u.company||u.name)}</b><span class="tag ${roleTag(u.role)}">${ROLES[u.role]}</span></div></div>
+      ${nav.map(([k,l])=>{const c=navCount(k);return `<button class="nav" data-act="go" data-arg="${k}" type="button" ${route===k?'aria-current="page"':""}><span>${l}</span>${c?`<span class="cnt">${c}</span>`:""}</button>`}).join("")}</nav>
+      <div class="main">${body}</div></div>`;
+  }
+  afterRender();
+}
+function afterRender(){
+  const m=$(".msgs");if(m)m.scrollTop=m.scrollHeight;
+}
+
+/* ================= PUBLIC VIEWS ================= */
+function homeView(){return `<div class="wrap">
+  <section class="hero"><div>
+    <h1>Your brand's marketing, <em>handled end to end.</em></h1>
+    <p>Businesses post what they need. Our social media pros and team take care of research, content, posting and ads across every platform, all tracked in one portal.</p>
+    <div class="ctas"><button class="btn primary" data-act="go" data-arg="register" type="button">Register now</button><button class="btn" data-act="go" data-arg="login" type="button">Log in</button></div></div>
+    <div class="phone" aria-hidden="true"><div class="row"><span class="av" style="cursor:default">YB</span><div><b>yourbrand</b><div class="meta">Example of a brand on BrandBay</div></div></div>
+      <div class="grid9">${"<span></span>".repeat(9)}</div>
+      <div class="metric"><span>Reach this month</span><b>1,24,800</b></div><div class="metric"><span>New followers</span><b>+2,310</b></div><div class="metric"><span>Posts scheduled</span><b>12</b></div></div>
+  </section>
+  <div class="label">One platform for everyone in marketing</div>
+  <section class="roles">
+    <div class="role"><span class="tag t-biz">For businesses</span><h3>Business portal</h3><p>Run your restaurant's or shop's entire social media from one login, or hand it to us.</p><ul><li>Connect all accounts and schedule posts</li><li>Book influencers for shoots</li><li>Approve content, calendar, reports, billing</li></ul><button class="btn" data-act="reg" data-arg="business" type="button">Register as business</button></div>
+    <div class="role"><span class="tag t-pro">For managers</span><h3>Social Media Manager portal</h3><p>Manage brands' social media: pick up campaigns, create content and book influencers.</p><ul><li>Find campaigns with match scores</li><li>Submit drafts and book influencer shoots</li><li>Caption helper, earnings and reviews</li></ul><button class="btn" data-act="reg" data-arg="pro" type="button">Register as manager</button></div>
+    <div class="role"><span class="tag t-inf">For influencers</span><h3>Influencer portal</h3><p>Get booked by local brands. We tell you where and when to shoot, you upload, you get paid.</p><ul><li>Shoot requests with date, time and address</li><li>Upload your video in the portal</li><li>Shoot calendar and earnings</li></ul><button class="btn" data-act="reg" data-arg="influencer" type="button">Register as influencer</button></div>
+  </section>
+  <p class="muted" style="font-size:14px;margin:-24px 0 36px">BrandBay team members log in at <span class="urlpill">${TEAM_URL}</span> <button class="linkbtn" data-act="go" data-arg="team" type="button">Team login →</button></p>
+  <div class="label">How a campaign moves</div>
+  <section class="flow">
+    <div><b>Submitted</b><span>Business posts a request with goal, platforms, services and budget.</span></div>
+    <div><b>Research</b><span>Team studies the audience, competitors and hashtags.</span></div>
+    <div><b>Content</b><span>Assigned pro creates drafts. Business approves or asks for changes.</span></div>
+    <div><b>Live</b><span>Content goes live on the chosen platforms and results are tracked.</span></div>
+  </section>
+  <div class="label">Packages</div>
+  <section class="plans">${Object.entries(PACKAGES).filter(([k])=>k!=="Custom").map(([k,p])=>`<div class="plan ${k==="Growth"?"feat":""}">${k==="Growth"?`<span class="tag t-biz">Most picked</span>`:""}<h3>${k}</h3><div class="price">${rupee(p.price)}<small> / month</small></div><p class="muted">${p.desc}</p><button class="btn ${k==="Growth"?"primary":""}" data-act="reg" data-arg="business" type="button">Choose ${k}</button></div>`).join("")}</section>
+</div>`}
+
+function loginView(){return `<div class="wrap"><div class="card auth">
+  <h2>Log in</h2><p class="sub">Log in with the email and password you registered with.</p>
+  <form data-form="login" novalidate><div class="field"><label for="l-email">Email</label><input id="l-email" type="email" placeholder="you@example.com"></div>
+  <div class="field"><label for="l-pass">Password</label><input id="l-pass" type="password" placeholder="Your password" autocomplete="current-password"></div>
+  <div class="err" id="lErr"></div><button class="btn primary" type="submit" style="width:100%">Log in</button></form>
+  <p style="margin-top:10px;font-size:14px"><button class="linkbtn" data-act="go" data-arg="forgot" type="button">Forgot password?</button></p>
+  <p class="muted" style="margin-top:16px;font-size:14px">New here? <button class="linkbtn" data-act="go" data-arg="register" type="button">Create an account</button></p>
+  <p class="muted" style="margin-top:6px;font-size:13px">BrandBay team member? Use the <button class="linkbtn" data-act="go" data-arg="team" type="button">team login</button>.</p>
+</div></div>`}
+function teamView(){return `<div class="wrap"><div class="card auth">
+  <div class="teamhead"><span class="tag t-emp">BrandBay Team</span><span class="urlpill">${TEAM_URL}</span></div>
+  <h2>Team login</h2><p class="sub">This login is only for BrandBay employees. You'll work on the same portal as businesses, managers and influencers, with the team tools added.</p>
+  <form data-form="teamlogin" novalidate><div class="field"><label for="t-email">Work email</label><input id="t-email" type="email" placeholder="name@brandbay.in"></div>
+  <div class="field"><label for="t-pass">Password</label><input id="t-pass" type="password" placeholder="Your password" autocomplete="current-password"></div>
+  <div class="err" id="tErr"></div><button class="btn primary" type="submit" style="width:100%">Log in to team portal</button></form>
+  <p class="muted" style="margin-top:16px;font-size:13px">New team members first register on the main page. An admin then upgrades their account to the team.</p>
+</div></div>`}
+
+function roleFields(r){
+  if(r==="business")return `<div class="two"><div class="field"><label for="r-company">Business name</label><input id="r-company" placeholder="e.g. Chai Corner"></div>
+    <div class="field"><label for="r-industry">Industry</label><select id="r-industry">${Object.keys(INDUSTRY_KEYS).map(i=>`<option>${i}</option>`).join("")}</select></div></div>
+    <div class="two"><div class="field"><label for="r-ig">Main social handle (if any)</label><input id="r-ig" placeholder="@yourbrand"></div><div class="field"><label for="r-address">Outlet address</label><input id="r-address" placeholder="Used for influencer shoots"></div></div>`;
+  if(r==="influencer")return `<div class="two"><div class="field"><label for="r-handle">Instagram handle</label><input id="r-handle" placeholder="@yourname"></div>
+    <div class="field"><label for="r-followers">Followers</label><input id="r-followers" placeholder="e.g. 80K"></div></div>
+    <div class="three"><div class="field"><label for="r-cat">Category</label><select id="r-cat">${INFCATS.map(c=>`<option>${c}</option>`).join("")}</select></div>
+    <div class="field"><label for="r-city">City</label><select id="r-city">${CITIES.map(c=>`<option>${c}</option>`).join("")}</select></div>
+    <div class="field"><label for="r-rate">Fee per shoot (₹)</label><input id="r-rate" type="number" placeholder="5000"></div></div>`;
+  if(r==="pro")return `<div class="two"><div class="field"><label for="r-handle">Instagram handle</label><input id="r-handle" placeholder="@yourname"></div>
+    <div class="field"><label for="r-followers">Followers</label><input id="r-followers" placeholder="e.g. 25K"></div></div>
+    <div class="two"><div class="field"><label for="r-niche">Niche / skills</label><input id="r-niche" placeholder="e.g. Food & Lifestyle"></div>
+    <div class="field"><label for="r-rate">Rate per post (₹)</label><input id="r-rate" type="number" placeholder="1500"></div></div>`;
+  return `<div class="field"><label for="r-dept">Department</label><select id="r-dept"><option>Operations</option><option>Research</option><option>Content</option><option>Sales</option></select></div>`;
+}
+function registerView(){return `<div class="wrap"><div class="card auth">
+  <h2>Create your account</h2><p class="sub">Choose who you are. Each role gets its own portal.</p>
+  <form data-form="register" id="regForm" novalidate>
+    <div class="pick" role="radiogroup" aria-label="Account type">${Object.entries(ROLES).filter(([k])=>k!=="employee").map(([k,v])=>`<label><input type="radio" name="role" value="${k}" ${k===ui.regRole?"checked":""} data-change="regrole">${v}<small>${k==="business"?"Manage my brand":k==="pro"?"Manage brands' social media":"Get booked for shoots"}</small></label>`).join("")}</div>
+    <div class="two"><div class="field"><label for="r-name">Full name</label><input id="r-name" placeholder="Your name"></div><div class="field"><label for="r-email">Email</label><input id="r-email" type="email" placeholder="you@example.com"></div></div>
+    <div class="two"><div class="field"><label for="r-phone">Phone</label><input id="r-phone" placeholder="+91 98xxx xxxxx"></div><div class="field"><label for="r-pass">Password</label><input id="r-pass" type="password" placeholder="At least 6 characters" autocomplete="new-password"></div></div>
+    <div id="roleFields">${roleFields(ui.regRole)}</div>
+    <label class="row" style="font-size:14px;margin-bottom:12px"><input type="checkbox" id="r-terms"> I am 18 or older and agree to the <a href="#terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="#privacy" target="_blank" rel="noopener">Privacy Policy</a></label>
+    <div class="err" id="rErr"></div>
+    <button class="btn primary" type="submit" style="width:100%">Create account</button>
+  </form>
+  <p class="muted" style="margin-top:16px;font-size:14px">Already registered? <button class="linkbtn" data-act="go" data-arg="login" type="button">Log in</button></p>
+</div></div>`}
+
+/* ================= SHARED PIECES ================= */
+function pipe(stage){const i=STAGES.indexOf(stage);return `<div><div class="pipe">${STAGES.map((s,j)=>`<span class="${j<=i?"on":""}"></span>`).join("")}</div><div class="pipe-l" style="margin-top:4px">${STAGES.map(s=>`<span>${s}</span>`).join("")}</div></div>`}
+function reqCard(r,extra=""){const p=r.pro?user(r.pro):null;
+  return `<div class="item click" data-act="go" data-arg="c-${r.id}"><div class="hd"><div><b>${esc(r.title)}</b><div class="meta"><span class="mono">${r.id}</span><span>${esc(bizName(r.biz))}</span><span class="num">${rupee(r.budget)}</span><span>Due ${fdate(r.deadline)}</span></div></div><span class="status s-${r.stage}">${r.stage}</span></div>
+  <div class="chips">${r.platforms.map(x=>`<span class="chip">${x}</span>`).join("")}</div>${pipe(r.stage)}
+  <div class="meta">Manager: ${p?`<b style="color:var(--ink)">${esc(p.name)}</b> ${esc(p.handle||"")}`:"Not assigned yet"}</div>${extra}</div>`}
+const stat=(l,v,s="")=>`<div class="stat"><small>${l}</small><b>${v}</b>${s?`<span>${s}</span>`:""}</div>`;
+const head=(t,sub="",right="")=>`<div class="dhead"><div>${sub?`<div class="label">${sub}</div>`:""}<h2>${t}</h2></div>${right}</div>`;
+function draftItem(d,actions=""){const r=req(d.req);return `<div class="item"><div class="draft"><div class="thumb th-${d.type}">${d.type}</div><div style="display:grid;gap:6px;min-width:0">
+  <div class="hd"><div class="meta"><span>${d.platform}</span><span>${fdate(d.date)}</span><span>${esc(r?.title||"")}</span></div><span class="status s-${d.status}">${d.status==="Changes"?"Changes requested":d.status}</span></div>
+  <p class="caption">${esc(d.caption)}</p>${d.hashtags?`<div class="meta" style="color:var(--info)">${esc(d.hashtags)}</div>`:""}
+  ${d.feedback&&d.status==="Changes"?`<div class="feedback">Feedback: ${esc(d.feedback)}</div>`:""}${actions}</div></div></div>`}
+function approveActions(d){
+  if(d.status!=="Pending")return"";
+  if(ui.changesFor===d.id)return `<form data-form="changes" data-arg="${d.id}" class="actions" style="align-items:stretch"><input class="inp" id="fb-${d.id}" placeholder="What should be changed?" style="flex:1;min-width:180px"><button class="btn small badb" type="submit">Send</button><button class="btn small ghost" data-act="cancelchanges" type="button">Cancel</button></form>`;
+  return `<div class="actions"><button class="btn small okb" data-act="approve" data-arg="${d.id}" type="button">Approve</button><button class="btn small" data-act="askchanges" data-arg="${d.id}" type="button">Request changes</button></div>`}
+
+/* ================= APP VIEWS ================= */
+const V={};
+
+/* ---- business ---- */
+V.business_overview=u=>{
+  const mine=myReqs(),pend=S.drafts.filter(d=>req(d.req)?.biz===u.id&&d.status==="Pending"),due=S.invoices.filter(i=>i.biz===u.id&&i.status==="Due");
+  const an=mine.map(analytics).filter(Boolean);const series=an.length?an[0].reach.map((_,i)=>an.reduce((a,x)=>a+x.reach[i],0)):null;
+  const upcoming=S.drafts.filter(d=>req(d.req)?.biz===u.id&&d.status==="Approved"&&d.date>=iso(0)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,4);
+  return head(`${mine.length?"Welcome back":"Welcome"}, ${esc(u.name.split(" ")[0])}`,esc(u.company),`<button class="btn primary" data-act="go" data-arg="new" type="button">New request</button>`)+
+  `<div class="stats">${stat("Active campaigns",mine.filter(r=>r.stage!=="Live").length,`${mine.length} total`)}${stat("Awaiting approval",pend.length,"posts to review")}${stat("Reach, 14 days",series?series.reduce((a,b)=>a+b,0).toLocaleString("en-IN"):"—")}${stat("Amount due",rupee(due.reduce((a,i)=>a+i.amount,0)),`${due.length} invoice${due.length===1?"":"s"}`)}</div>
+  <div class="cols"><div class="card"><div class="chead"><h3>Daily reach across campaigns</h3><span class="muted" style="font-size:13px">Last 14 days</span></div>${series?lineChart(series,dayLabels(14)):`<div class="empty">Live reach numbers appear once your social accounts are linked to BrandBay. That arrives in the next update.</div>`}</div>
+  <div class="card"><h3>Coming up next</h3><div class="list">${upcoming.length?upcoming.map(d=>`<div class="row"><div class="thumb th-${d.type}" style="width:44px;font-size:9px">${d.type}</div><div style="min-width:0"><b style="font-size:14px">${fdate(d.date)} · ${d.platform}</b><div class="muted" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.caption)}</div></div></div>`).join(""):`<div class="empty">No approved posts scheduled yet.</div>`}</div></div></div>
+  <div class="card"><div class="chead"><h3>Your campaigns</h3><button class="btn small" data-act="go" data-arg="campaigns" type="button">View all</button></div><div class="list">${mine.slice(0,3).map(r=>reqCard(r)).join("")||`<div class="empty">No campaigns yet.</div>`}</div></div>`};
+
+V.business_campaigns=u=>{const mine=myReqs().sort((a,b)=>b.id.localeCompare(a.id));const list=ui.campFilter==="All"?mine:mine.filter(r=>r.stage===ui.campFilter);
+  return head("My campaigns","",`<button class="btn primary" data-act="go" data-arg="new" type="button">New request</button>`)+
+  `<div class="card"><div class="tabs" style="margin-bottom:14px">${["All",...STAGES].map(s=>`<button type="button" data-act="campfilter" data-arg="${s}" aria-pressed="${ui.campFilter===s}">${s} (${s==="All"?mine.length:mine.filter(r=>r.stage===s).length})</button>`).join("")}</div>
+  <div class="list">${list.map(r=>reqCard(r)).join("")||`<div class="empty">No campaigns in this stage.</div>`}</div></div>`};
+
+V.business_new=u=>head("New campaign request","Tell us what you need")+`<form class="card" data-form="newreq" novalidate>
+  <div class="field"><span class="flabel">Package</span><div class="pick" style="grid-template-columns:repeat(4,1fr)">${Object.entries(PACKAGES).map(([k,p],i)=>`<label><input type="radio" name="pkg" value="${k}" ${i===1?"checked":""} data-change="pkg">${k}<small>${p.price?rupee(p.price):"Your budget"}</small></label>`).join("")}</div><p class="muted" id="pkgDesc" style="font-size:13px;margin-top:-8px">${PACKAGES.Growth.desc}</p></div>
+  <div class="two"><div class="field"><label for="q-title">Campaign name</label><input id="q-title" placeholder="e.g. Christmas offer promo"></div><div class="field"><label for="q-deadline">Target date</label><input id="q-deadline" type="date" value="${iso(21)}" min="${iso(1)}"></div></div>
+  <div class="field"><label for="q-goal">What do you want to achieve?</label><textarea id="q-goal" placeholder="e.g. 500 new followers and more walk-ins this month"></textarea></div>
+  <div class="field"><label for="q-aud">Who is your target audience?</label><input id="q-aud" placeholder="e.g. Women 25–40 in Hyderabad who shop online" value="${esc(S.brandkits[u.id]?.audience||"")}"></div>
+  <div class="field"><span class="flabel">Platforms</span><div class="checks">${PLATFORMS.map((p,i)=>`<label><input type="checkbox" name="plat" value="${p}" ${i===0?"checked":""}>${p}</label>`).join("")}</div></div>
+  <div class="field"><span class="flabel">Services needed</span><div class="checks">${SERVICES.map((s,i)=>`<label><input type="checkbox" name="svc" value="${s}" ${i<2?"checked":""}>${s}</label>`).join("")}</div></div>
+  <div class="two"><div class="field"><label for="q-budget">Budget (₹)</label><input id="q-budget" type="number" min="1000" step="1000" value="35000"></div><div class="field"><label for="q-notes">Anything else? (optional)</label><input id="q-notes" placeholder="Reference accounts, offers, shoot locations…"></div></div>
+  <div class="err" id="qErr"></div><button class="btn primary" type="submit">Submit request</button></form>`;
+
+V.business_approvals=u=>{const ds=S.drafts.filter(d=>req(d.req)?.biz===u.id);const pend=ds.filter(d=>d.status==="Pending"),done=ds.filter(d=>d.status!=="Pending").slice(-6).reverse();
+  return head("Content approvals","Review before it goes live")+`<div class="card"><h3>Waiting for you (${pend.length})</h3><div class="list">${pend.map(d=>draftItem(d,approveActions(d))).join("")||`<div class="empty">Nothing to review. New drafts from your pro appear here.</div>`}</div></div>
+  <div class="card"><h3>Recently reviewed</h3><div class="list">${done.map(d=>draftItem(d)).join("")||`<div class="empty">No reviewed drafts yet.</div>`}</div></div>`};
+
+V.business_billing=u=>{const inv=S.invoices.filter(i=>i.biz===u.id).sort((a,b)=>b.id.localeCompare(a.id));const paid=inv.filter(i=>i.status==="Paid").reduce((a,i)=>a+i.amount,0),due=inv.filter(i=>i.status==="Due").reduce((a,i)=>a+i.amount,0);
+  return head("Billing","Invoices and payments")+`<div class="stats" style="grid-template-columns:repeat(3,1fr)">${stat("Total billed",rupee(paid+due))}${stat("Paid",rupee(paid))}${stat("Due",rupee(due))}</div>
+  <div class="card"><div class="tablewrap"><table><thead><tr><th>Invoice</th><th>Campaign</th><th>Amount</th><th>Due date</th><th>Status</th><th></th></tr></thead><tbody>
+  ${inv.map(i=>`<tr><td class="mono">${i.id}</td><td><button class="linkbtn" data-act="go" data-arg="c-${i.req}" type="button">${esc(req(i.req)?.title||i.req)}</button></td><td class="num">${rupee(i.amount)}</td><td>${fdate(i.due)}</td><td><span class="status s-${i.status==="Due"&&i.due<iso(0)?"Overdue":i.status}">${i.status==="Due"&&i.due<iso(0)?"Overdue":i.status}</span></td><td>${i.status==="Due"?`<span class="muted" style="font-size:13px">Awaiting payment</span>`:`<span class="muted" style="font-size:13px">Received</span>`}</td></tr>`).join("")||`<tr><td colspan="6"><div class="empty">No invoices yet.</div></td></tr>`}
+  </tbody></table></div><p class="muted" style="font-size:13px;margin-top:12px">Online payment is coming in the next update. For now, pay the BrandBay team directly and they will mark the invoice as paid here.</p></div>`};
+
+V.business_brandkit=u=>{const k=S.brandkits[u.id]||{tone:"Friendly",colors:["#D63A6E","#17152B","#FFFFFF"],hashtags:"",audience:"",dos:"",donts:""};
+  return head("Brand kit","Shared with every pro on your campaigns")+`<form class="card" data-form="brandkit" novalidate>
+  <div class="two"><div class="field"><label for="bk-tone">Brand voice</label><select id="bk-tone">${["Warm & friendly","Energetic & motivating","Premium & elegant","Fun & quirky","Professional & trusted","Friendly"].map(t=>`<option ${t===k.tone?"selected":""}>${t}</option>`).join("")}</select></div>
+  <div class="field"><span class="flabel">Brand colors</span><div class="swatches">${k.colors.map((c,i)=>`<input type="color" id="bk-c${i}" value="${c}" aria-label="Brand color ${i+1}">`).join("")}</div></div></div>
+  <div class="field"><label for="bk-tags">Brand hashtags</label><input id="bk-tags" value="${esc(k.hashtags)}" placeholder="#YourBrand #YourCity"></div>
+  <div class="field"><label for="bk-aud">Target audience</label><input id="bk-aud" value="${esc(k.audience)}"></div>
+  <div class="two"><div class="field"><label for="bk-dos">Do's</label><textarea id="bk-dos">${esc(k.dos)}</textarea></div><div class="field"><label for="bk-donts">Don'ts</label><textarea id="bk-donts">${esc(k.donts)}</textarea></div></div>
+  <button class="btn primary" type="submit">Save brand kit</button></form>`};
+
+/* ---- pro ---- */
+V.pro_overview=u=>{const mine=myReqs(),open=S.requests.filter(r=>!r.pro),fix=S.drafts.filter(d=>d.pro===u.id&&d.status==="Changes"),up=S.drafts.filter(d=>d.pro===u.id&&d.status==="Approved"&&d.date>=iso(0)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,4);
+  const earned=mine.reduce((a,r)=>a+r.budget*.6,0),rt=rating(u.id);
+  return head(`Hi, ${esc(u.name.split(" ")[0])}`,esc(u.handle||""),`<button class="btn primary" data-act="go" data-arg="market" type="button">Find campaigns</button>`)+
+  (u.status==="Unverified"?`<div class="card" style="border-color:var(--warn)"><b>Your profile is being verified.</b> <span class="muted">You can pick up campaigns once the BrandBay team verifies your account.</span></div>`:"")+`<div class="stats">${stat("Open campaigns",open.length,"ready to accept")}${stat("My campaigns",mine.length,`${mine.filter(r=>r.stage==="Live").length} live`)}${stat("Rating",rt?rt.toFixed(1)+" / 5":"New",`${S.reviews.filter(r=>r.pro===u.id).length} reviews`)}${stat("Earnings (est.)",rupee(earned),"60% of budgets")}</div>
+  <div class="cols2"><div class="card"><h3>Needs your fix (${fix.length})</h3><div class="list">${fix.map(d=>draftItem(d,`<div class="actions"><button class="btn small" data-act="resubmit" data-arg="${d.id}" type="button">Mark as fixed and resubmit</button></div>`)).join("")||`<div class="empty">No change requests. Nice work.</div>`}</div></div>
+  <div class="card"><h3>Scheduled posts</h3><div class="list">${up.map(d=>`<div class="row"><div class="thumb th-${d.type}" style="width:44px;font-size:9px">${d.type}</div><div style="min-width:0"><b style="font-size:14px">${fdate(d.date)} · ${esc(bizName(req(d.req).biz))}</b><div class="muted" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.caption)}</div></div></div>`).join("")||`<div class="empty">Nothing scheduled yet.</div>`}</div></div></div>
+  <div class="card"><div class="chead"><h3>Best matches for you</h3><button class="btn small" data-act="go" data-arg="market" type="button">See all</button></div><div class="list">${open.sort((a,b)=>matchScore(u,b)-matchScore(u,a)).slice(0,2).map(r=>reqCard(r,`<div class="actions"><span class="score">${matchScore(u,r)}% match</span></div>`)).join("")||`<div class="empty">No open campaigns right now.</div>`}</div></div>`};
+
+V.pro_market=u=>{let open=S.requests.filter(r=>!r.pro);const q=ui.mkSearch.toLowerCase();
+  open=open.filter(r=>(r.title+" "+bizName(r.biz)+" "+r.goal).toLowerCase().includes(q)).filter(r=>ui.mkPlat==="All"||r.platforms.includes(ui.mkPlat)).filter(r=>r.budget>=ui.mkMin).sort((a,b)=>matchScore(u,b)-matchScore(u,a));
+  return head("Find campaigns","Marketplace")+`<div class="card"><div class="toolbar"><input class="inp" id="mk-q" placeholder="Search by brand, title or goal" value="${esc(ui.mkSearch)}" data-input="mk"><select id="mk-p" data-change="mkplat" aria-label="Platform">${["All",...PLATFORMS].map(p=>`<option ${p===ui.mkPlat?"selected":""}>${p}</option>`).join("")}</select><select id="mk-b" data-change="mkmin" aria-label="Minimum budget">${[0,20000,40000,60000].map(b=>`<option value="${b}" ${b==ui.mkMin?"selected":""}>${b?"Budget ≥ "+rupee(b):"Any budget"}</option>`).join("")}</select></div>
+  <div class="list">${open.map(r=>reqCard(r,`<div class="actions"><span class="score">${matchScore(u,r)}% match</span><span class="muted" style="font-size:13px">Your estimated payout ${rupee(r.budget*.6)}</span><span class="spacer"></span><button class="btn small primary" data-act="accept" data-arg="${r.id}" type="button">Accept campaign</button></div>`)).join("")||`<div class="empty">No campaigns match these filters.</div>`}</div></div>`};
+
+V.pro_mywork=u=>{const mine=myReqs();const list=ui.proTab==="active"?mine.filter(r=>r.stage!=="Live"):mine.filter(r=>r.stage==="Live");
+  return head("My campaigns")+`<div class="card"><div class="tabs" style="margin-bottom:14px"><button type="button" data-act="protab" data-arg="active" aria-pressed="${ui.proTab==="active"}">In progress (${mine.filter(r=>r.stage!=="Live").length})</button><button type="button" data-act="protab" data-arg="live" aria-pressed="${ui.proTab==="live"}">Live (${mine.filter(r=>r.stage==="Live").length})</button></div>
+  <div class="list">${list.map(r=>reqCard(r,r.stage!=="Live"?`<div class="actions"><button class="btn small" data-act="advance" data-arg="${r.id}" type="button">Move to ${STAGES[STAGES.indexOf(r.stage)+1]}</button><button class="btn small primary" data-act="go" data-arg="c-${r.id}" type="button">Submit content</button></div>`:"")).join("")||`<div class="empty">${ui.proTab==="active"?"No campaigns in progress. Accept one from Find campaigns.":"None of your campaigns are live yet."}</div>`}</div></div>`};
+
+const TONES={"Warm & friendly":{open:["Good vibes only ✨","Made with love, served with a smile.","Your new favourite spot is waiting."],cta:["Drop by today!","Tag someone you'd bring along 👇","See you soon!"]},
+  "Energetic & motivating":{open:["No excuses. Just results. 💪","Today is the day you start.","Stronger every single day."],cta:["Book your free trial now!","Comment 'IN' if you're ready 🔥","Let's go!"]},
+  "Premium & elegant":{open:["Crafted for those who notice the details.","Elegance, redefined.","Timeless pieces for timeless moments."],cta:["Explore the collection.","Book a private viewing.","Discover more at the link in bio."]},
+  "Fun & quirky":{open:["Plot twist: this is your sign 😜","Warning: highly addictive.","Okay but have you tried this yet?"],cta:["Tag your partner in crime!","Don't say we didn't warn you.","Slide into our DMs 😉"]}};
+V.pro_studio=u=>{const g=ui.gen;
+  return head("Caption helper","Write captions and hashtags faster")+`<div class="cols"><form class="card" data-form="gen" novalidate>
+  <div class="two"><div class="field"><label for="g-brand">Brand</label><input id="g-brand" value="${esc(g?.brand||"Chai Corner")}"></div><div class="field"><label for="g-plat">Platform</label><select id="g-plat">${PLATFORMS.slice(0,5).map(p=>`<option ${g?.plat===p?"selected":""}>${p}</option>`).join("")}</select></div></div>
+  <div class="field"><label for="g-topic">What's the post about?</label><input id="g-topic" value="${esc(g?.topic||"Diwali festive combo offer at ₹149")}"></div>
+  <div class="two"><div class="field"><label for="g-tone">Tone</label><select id="g-tone">${Object.keys(TONES).map(t=>`<option ${g?.tone===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="field"><label for="g-city">City (for hashtags)</label><input id="g-city" value="${esc(g?.city||"Hyderabad")}"></div></div>
+  <button class="btn primary" type="submit">Generate captions</button></form>
+  <div class="card"><h3>Suggestions</h3><div class="out">${g?g.out.map((c,i)=>`<div class="item"><p class="caption">${esc(c)}</p><div class="actions"><button class="btn small" data-act="copy" data-arg="${i}" type="button">Copy</button></div></div>`).join(""):`<div class="empty">Fill in the details and press Generate. You'll get three captions with hashtags.</div>`}</div></div></div>`};
+
+V.pro_earnings=u=>{const mine=myReqs();const rows=mine.map(r=>{const inv=S.invoices.filter(i=>i.req===r.id),paid=inv.filter(i=>i.status==="Paid").reduce((a,i)=>a+i.amount,0);return{r,share:r.budget*.6,released:paid*.6}});
+  const tot=rows.reduce((a,x)=>a+x.share,0),rel=rows.reduce((a,x)=>a+x.released,0);
+  return head("Earnings","Your share is 60% of each campaign budget")+`<div class="stats" style="grid-template-columns:repeat(3,1fr)">${stat("Total earnings",rupee(tot))}${stat("Released",rupee(rel),"after client payment")}${stat("Pending",rupee(tot-rel))}</div>
+  <div class="card"><div class="tablewrap"><table><thead><tr><th>Campaign</th><th>Brand</th><th>Stage</th><th>Your share</th><th>Released</th></tr></thead><tbody>${rows.map(x=>`<tr><td><button class="linkbtn" data-act="go" data-arg="c-${x.r.id}" type="button">${esc(x.r.title)}</button></td><td>${esc(bizName(x.r.biz))}</td><td><span class="status s-${x.r.stage}">${x.r.stage}</span></td><td class="num">${rupee(x.share)}</td><td class="num">${rupee(x.released)}</td></tr>`).join("")||`<tr><td colspan="5"><div class="empty">Accept a campaign to start earning.</div></td></tr>`}</tbody></table></div></div>`};
+
+/* ---- employee ---- */
+V.employee_overview=u=>{const R=S.requests,paid=S.invoices.filter(i=>i.status==="Paid").reduce((a,i)=>a+i.amount,0),due=S.invoices.filter(i=>i.status==="Due").reduce((a,i)=>a+i.amount,0),unv=S.users.filter(x=>x.status==="Unverified");
+  return head("Operations desk",`${esc(u.name)} · ${esc(u.dept||"")}`)+`<div class="stats">${stat("Needs a pro",R.filter(r=>!r.pro).length,"unassigned requests")}${stat("In progress",R.filter(r=>r.stage==="Research"||r.stage==="Content").length)}${stat("Live",R.filter(r=>r.stage==="Live").length)}${stat("Collected",rupee(paid),rupee(due)+" outstanding")}</div>
+  <div class="cols2"><div class="card"><h3>Campaigns by stage</h3>${bars(STAGES.map(s=>({label:s,value:R.filter(r=>r.stage===s).length})),v=>v)}</div>
+  <div class="card"><h3>Needs attention</h3><div class="list">
+   ${R.filter(r=>!r.pro).map(r=>`<div class="row" style="justify-content:space-between;flex-wrap:wrap"><span><b>${esc(r.title)}</b><br><span class="muted" style="font-size:13px">${esc(bizName(r.biz))} · no pro assigned</span></span><button class="btn small primary" data-act="go" data-arg="match" type="button">Assign</button></div>`).join("")}
+   ${S.bookings.filter(b=>b.status==="Uploaded").map(b=>`<div class="row" style="justify-content:space-between;flex-wrap:wrap"><span><b>${esc(user(b.inf).name)} · ${b.deliverable}</b><br><span class="muted" style="font-size:13px">${esc(bizName(b.biz))} · uploaded, needs review</span></span><button class="btn small" data-act="go" data-arg="bookings" type="button">Review</button></div>`).join("")}
+   ${unv.map(x=>`<div class="row" style="justify-content:space-between;flex-wrap:wrap"><span><b>${esc(x.name)}</b><br><span class="muted" style="font-size:13px">${ROLES[x.role]} · waiting for verification</span></span><button class="btn small okb" data-act="verify" data-arg="${x.id}" type="button">Verify</button></div>`).join("")}
+   ${!R.filter(r=>!r.pro).length&&!unv.length?`<div class="empty">Everything is handled.</div>`:""}</div></div></div>
+  <div class="card"><div class="chead"><h3>Recent activity</h3><button class="btn small" data-act="go" data-arg="activity" type="button">Full log</button></div>${feed(S.activity.slice(0,6))}</div>`};
+
+V.employee_requests=u=>{const pros=S.users.filter(x=>x.role==="pro"&&x.status==="Active");const q=ui.reqSearch.toLowerCase();
+  const list=[...S.requests].sort((a,b)=>b.id.localeCompare(a.id)).filter(r=>(r.title+" "+r.id+" "+bizName(r.biz)).toLowerCase().includes(q)).filter(r=>ui.reqStage==="All"||r.stage===ui.reqStage);
+  return head("All requests","",`<button class="btn small" data-act="copyreport" type="button">Copy weekly report</button>`)+`<div class="card"><div class="toolbar"><input class="inp" id="rq-q" placeholder="Search by title, ID or business" value="${esc(ui.reqSearch)}" data-input="rq"><select data-change="reqstage" aria-label="Stage filter">${["All",...STAGES].map(s=>`<option ${s===ui.reqStage?"selected":""}>${s}</option>`).join("")}</select></div>
+  <div class="tablewrap"><table><thead><tr><th>Request</th><th>Business</th><th>Package</th><th>Budget</th><th>Due</th><th>Assigned manager</th><th>Stage</th></tr></thead><tbody>
+  ${list.map(r=>`<tr><td><button class="linkbtn" data-act="go" data-arg="c-${r.id}" type="button">${esc(r.title)}</button><br><span class="mono muted">${r.id}</span></td><td>${esc(bizName(r.biz))}</td><td>${r.pkg}</td><td class="num">${rupee(r.budget)}</td><td>${fdate(r.deadline)}</td>
+  <td><select class="tsel" data-change="assign" data-arg="${r.id}" aria-label="Assign pro for ${r.id}"><option value="">Unassigned</option>${pros.map(p=>`<option value="${p.id}" ${p.id===r.pro?"selected":""}>${esc(p.name)}</option>`).join("")}</select></td>
+  <td><select class="tsel" data-change="stage" data-arg="${r.id}" aria-label="Stage for ${r.id}">${STAGES.map(s=>`<option ${s===r.stage?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("")||`<tr><td colspan="7"><div class="empty">No requests match.</div></td></tr>`}
+  </tbody></table></div></div>`};
+
+V.employee_match=u=>{const open=S.requests.filter(r=>!r.pro),pros=S.users.filter(x=>x.role==="pro"&&x.status==="Active");
+  return head("Manager matching","Best social media manager for each open request")+(open.length?open.map(r=>`<div class="card"><div class="chead"><div><h3 style="margin:0">${esc(r.title)}</h3><div class="meta"><span>${esc(bizName(r.biz))}</span><span>${esc(user(r.biz)?.industry||"")}</span><span class="num">${rupee(r.budget)}</span></div></div><button class="btn small" data-act="go" data-arg="c-${r.id}" type="button">Open</button></div>
+  <div class="tablewrap"><table><thead><tr><th>Manager</th><th>Niche</th><th>Followers</th><th>Rating</th><th>Match</th><th></th></tr></thead><tbody>${pros.map(p=>({p,s:matchScore(p,r)})).sort((a,b)=>b.s-a.s).map(({p,s},i)=>`<tr><td><b>${esc(p.name)}</b><br><span class="mono muted">${esc(p.handle)}</span></td><td>${esc(p.niche)}</td><td class="num">${esc(p.followers)}</td><td><span class="stars">${starStr(rating(p.id))}</span></td><td><span class="score">${s}%</span>${i===0?` <span class="tag t-biz">Best</span>`:""}</td><td><button class="btn small ${i===0?"primary":""}" data-act="assignbtn" data-arg="${r.id}|${p.id}" type="button">Assign</button></td></tr>`).join("")}</tbody></table></div></div>`).join(""):`<div class="card"><div class="empty">All requests have a pro assigned.</div></div>`)};
+
+V.employee_users=u=>{const list=S.users.filter(x=>ui.userRole==="All"||x.role===ui.userRole);
+  return head("Users",`${S.users.length} registered`)+`<div class="card"><div class="tabs" style="margin-bottom:14px">${["All","business","pro","influencer","employee"].map(r=>`<button type="button" data-act="userrole" data-arg="${r}" aria-pressed="${ui.userRole===r}">${r==="All"?"All":ROLES[r]} (${r==="All"?S.users.length:S.users.filter(x=>x.role===r).length})</button>`).join("")}</div>
+  <div class="tablewrap"><table><thead><tr><th>Name</th><th>Role</th><th>Contact</th><th>Details</th><th>Joined</th><th>Status</th><th></th></tr></thead><tbody>
+  ${list.map(x=>`<tr><td><b>${esc(x.name)}</b></td><td><span class="tag ${roleTag(x.role)}">${ROLES[x.role]}</span></td><td><span class="mono">${esc(x.email)}</span><br><span class="muted" style="font-size:13px">${esc(x.phone||"")}</span></td><td>${esc(x.role==="business"?`${x.company} · ${x.industry}`:x.role==="pro"?`${x.handle} · ${x.niche}`:x.role==="influencer"?`${x.handle} · ${x.followers} · ${x.category}, ${x.city}`:x.dept)}</td><td>${fdate(x.joined)}</td><td><span class="status s-${x.status}">${x.status}</span></td>
+  <td>${x.id===u.id?"":x.status==="Unverified"?`<button class="btn small okb" data-act="verify" data-arg="${x.id}" type="button">Verify</button>`:x.status==="Active"?`<button class="btn small ghost" data-act="suspend" data-arg="${x.id}" type="button">Suspend</button>`:`<button class="btn small" data-act="verify" data-arg="${x.id}" type="button">Reactivate</button>`}</td></tr>`).join("")}
+  </tbody></table></div></div>`};
+
+V.employee_revenue=u=>{const inv=S.invoices,paid=inv.filter(i=>i.status==="Paid").reduce((a,i)=>a+i.amount,0),due=inv.filter(i=>i.status==="Due").reduce((a,i)=>a+i.amount,0);
+  const byBiz=S.users.filter(x=>x.role==="business").map(b=>({label:b.company,value:inv.filter(i=>i.biz===b.id).reduce((a,i)=>a+i.amount,0)})).filter(x=>x.value);
+  const byPkg=Object.keys(PACKAGES).map(p=>({label:p,value:S.requests.filter(r=>r.pkg===p).reduce((a,r)=>a+r.budget,0)})).filter(x=>x.value);
+  return head("Revenue","Platform earns 40% of each campaign")+`<div class="stats">${stat("Total billed",rupee(paid+due))}${stat("Collected",rupee(paid))}${stat("Outstanding",rupee(due))}${stat("Platform margin",rupee((paid+due)*.4),"40% of billed")}</div>
+  <div class="cols2"><div class="card"><h3>Billed by business</h3>${bars(byBiz,rupee)}</div><div class="card"><h3>Budget by package</h3>${bars(byPkg,rupee)}</div></div>
+  <div class="card"><h3>All invoices</h3><div class="tablewrap"><table><thead><tr><th>Invoice</th><th>Business</th><th>Campaign</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${[...inv].sort((a,b)=>b.id.localeCompare(a.id)).map(i=>`<tr><td class="mono">${i.id}</td><td>${esc(bizName(i.biz))}</td><td><button class="linkbtn" data-act="go" data-arg="c-${i.req}" type="button">${esc(req(i.req)?.title||i.req)}</button></td><td class="num">${rupee(i.amount)}</td><td>${fdate(i.due)}</td><td><span class="status s-${i.status}">${i.status}</span></td><td>${i.status==="Due"?`<div class="actions"><button class="btn small okb" data-act="markpaid" data-arg="${i.id}" type="button">Mark paid</button><button class="btn small" data-act="remind" data-arg="${i.id}" type="button">Send reminder</button></div>`:""}</td></tr>`).join("")}</tbody></table></div></div>`};
+
+V.employee_activity=u=>head("Activity log","Everything that happened on the platform")+`<div class="card">${feed(S.activity)}</div>`;
+function feed(items){return items.length?`<div class="feed">${items.map(a=>`<div><i></i><span>${esc(a.text)}<small>${ago(a.at)}${a.req?` · <button class="linkbtn" style="font-weight:600;font-size:12px" data-act="go" data-arg="c-${a.req}" type="button">${a.req}</button>`:""}</small></span></div>`).join("")}</div>`:`<div class="empty">No activity yet.</div>`}
+
+/* ---- shared: calendar, messages, settings ---- */
+V.calendar=u=>{
+  const base=ui.calMonth?new Date(ui.calMonth+"-01T00:00:00"):new Date();const y=base.getFullYear(),m=base.getMonth();
+  const first=new Date(y,m,1),start=new Date(y,m,1-((first.getDay()+6)%7));
+  const ds=S.drafts.filter(d=>{const r=req(d.req);return r&&canSee(r)&&d.status!=="Changes"});
+  const ps=myPosts(),sh=myBookings().filter(b=>b.status!=="Declined"&&b.status!=="Cancelled");
+  const cells=[];for(let i=0;i<42;i++){const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;cells.push({d,key,other:d.getMonth()!==m})}
+  const today=iso(0);const mk=(dy,dm)=>{const d=new Date(y,m+dm,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`};
+  return head("Content calendar",esc(first.toLocaleDateString("en-IN",{month:"long",year:"numeric"})),`<div class="actions"><button class="btn small" data-act="cal" data-arg="${mk(0,-1)}" type="button">← Prev</button><button class="btn small" data-act="cal" data-arg="" type="button">Today</button><button class="btn small" data-act="cal" data-arg="${mk(0,1)}" type="button">Next →</button></div>`)+
+  `<div class="card"><div class="chips" style="margin-bottom:12px"><span class="chip ev-Post">Post</span><span class="chip ev-Reel">Reel</span><span class="chip ev-Story">Story</span><span class="chip ev-Own">Your own post</span><span class="chip ev-Shoot">Influencer shoot</span><span class="muted" style="font-size:13px">Pending drafts show with a dot</span></div><div class="calwrap"><div class="cal">${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=>`<div class="dow">${d}</div>`).join("")}
+  ${cells.map(c=>`<div class="day ${c.other?"other":""} ${c.key===today?"today":""}"><span class="n">${c.d.getDate()}</span>${ds.filter(d=>d.date===c.key).map(d=>`<button class="ev ev-${d.type}" data-act="go" data-arg="c-${d.req}" type="button" title="${esc(d.caption)}">${d.status==="Pending"?"● ":""}${d.type} · ${esc(bizName(req(d.req).biz))}</button>`).join("")}${ps.filter(p=>p.date===c.key).map(p=>`<button class="ev ev-Own" data-act="go" data-arg="planner" type="button" title="${esc(p.caption)}">${p.time} ${esc(p.platform)}</button>`).join("")}${sh.filter(b=>b.date===c.key).map(b=>`<button class="ev ev-Shoot" data-act="go" data-arg="${bkRoute(S.current)}" type="button" title="${esc(b.location)}">🎬 ${b.time} ${esc(me().role==="influencer"?bizName(b.biz):user(b.inf).name.split(" ")[0])}</button>`).join("")}</div>`).join("")}</div></div></div>`};
+
+V.messages=u=>{const rs=myReqs().filter(r=>u.role==="employee"||r.pro||r.biz===u.id);
+  if(!ui.thread||!rs.find(r=>r.id===ui.thread))ui.thread=rs[0]?.id;
+  const r=req(ui.thread),ms=S.messages.filter(m=>m.req===ui.thread);
+  return head("Messages","One thread per campaign")+(rs.length?`<div class="chat"><div class="threads">${rs.map(x=>{const last=S.messages.filter(m=>m.req===x.id).slice(-1)[0];return `<button class="thread" data-act="thread" data-arg="${x.id}" aria-current="${x.id===ui.thread}" type="button"><b style="font-size:14px">${esc(x.title)}</b><small>${last?esc(user(last.from)?.name.split(" ")[0]+": "+last.text):"No messages yet"}</small></button>`}).join("")}</div>
+  <div class="convo"><div class="ch"><b>${esc(r.title)}</b><div class="meta"><span>${esc(bizName(r.biz))}</span><span>Manager: ${esc(user(r.pro)?.name||"not assigned")}</span><span>Team: BrandBay</span></div></div>
+  <div class="msgs">${ms.map(m=>{const f=user(m.from);return `<div class="msg ${m.from===u.id?"mine":""}"><small>${esc(f?.name||"")} · ${ROLES[f?.role]||""}</small><div class="bub">${esc(m.text)}</div><small>${ago(m.at)}</small></div>`}).join("")||`<div class="empty">Say hello to start the conversation.</div>`}</div>
+  <form class="compose" data-form="msg"><input id="msg-in" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn primary" type="submit">Send</button></form></div></div>`:`<div class="card"><div class="empty">Messages open once you have a campaign.</div></div>`)};
+
+V.settings=u=>{const revs=S.reviews.filter(r=>r.pro===u.id);
+  return head(u.role==="pro"?"Profile & reviews":"Settings")+`<div class="cols"><form class="card" data-form="settings" novalidate><div class="row" style="margin-bottom:16px"><span class="av lg">${initials(u.name)}</span><div><b style="font-size:17px">${esc(u.name)}</b><div class="muted">${ROLES[u.role]} · joined ${fdate(u.joined)}</div></div></div>
+  <div class="two"><div class="field"><label for="s-name">Full name</label><input id="s-name" value="${esc(u.name)}"></div><div class="field"><label for="s-phone">Phone</label><input id="s-phone" value="${esc(u.phone||"")}"></div></div>
+  <div class="field"><label for="s-email">Email</label><input id="s-email" type="email" value="${esc(u.email)}" readonly title="Contact the BrandBay team to change your email"></div>
+  ${u.role==="business"?`<div class="two"><div class="field"><label for="s-company">Business name</label><input id="s-company" value="${esc(u.company||"")}"></div><div class="field"><label for="s-handle">Main social handle</label><input id="s-handle" value="${esc(u.handle||"")}"></div></div><div class="field"><label for="s-address">Outlet address (used for influencer shoots)</label><input id="s-address" value="${esc(u.address||"")}"></div>`:""}
+  ${u.role==="pro"?`<div class="three"><div class="field"><label for="s-handle">Handle</label><input id="s-handle" value="${esc(u.handle||"")}"></div><div class="field"><label for="s-followers">Followers</label><input id="s-followers" value="${esc(u.followers||"")}"></div><div class="field"><label for="s-rate">Rate / post (₹)</label><input id="s-rate" type="number" value="${u.rate||""}"></div></div>
+  <div class="field"><label for="s-niche">Niche</label><input id="s-niche" value="${esc(u.niche||"")}"></div><div class="field"><label for="s-bio">Bio</label><textarea id="s-bio">${esc(u.bio||"")}</textarea></div>`:""}
+  ${u.role==="influencer"?`<div class="three"><div class="field"><label for="s-handle">Handle</label><input id="s-handle" value="${esc(u.handle||"")}"></div><div class="field"><label for="s-followers">Followers</label><input id="s-followers" value="${esc(u.followers||"")}"></div><div class="field"><label for="s-rate">Fee per shoot (₹)</label><input id="s-rate" type="number" value="${u.rate||""}"></div></div>
+  <div class="two"><div class="field"><label for="s-cat">Category</label><select id="s-cat">${INFCATS.map(c=>`<option ${c===u.category?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label for="s-city">City</label><select id="s-city">${CITIES.map(c=>`<option ${c===u.city?"selected":""}>${c}</option>`).join("")}</select></div></div>
+  <div class="field"><label for="s-bio">Bio</label><textarea id="s-bio">${esc(u.bio||"")}</textarea></div>`:""}
+  <div class="field"><span class="flabel">Email me about</span><div class="checks"><label><input type="checkbox" checked> New messages</label><label><input type="checkbox" checked> Campaign updates</label><label><input type="checkbox"> Weekly report</label></div></div>
+  <div class="actions"><button class="btn primary" type="submit">Save changes</button></div></form>
+  ${u.role==="pro"?`<div class="card"><h3>Reviews</h3><p style="margin-bottom:12px"><span class="stars" style="font-size:20px">${starStr(rating(u.id))}</span> <b>${rating(u.id).toFixed(1)}</b> <span class="muted">from ${revs.length} brands</span></p><div class="list">${revs.map(r=>`<div class="item"><div class="hd"><b>${esc(bizName(r.biz))}</b><span class="stars">${starStr(r.stars)}</span></div><p style="font-size:14px">${esc(r.text)}</p><small class="muted">${fdate(r.at)}</small></div>`).join("")||`<div class="empty">No reviews yet.</div>`}</div></div>`
+  :`<div class="card"><h3>Your account</h3><div class="kv"><div><small>Role</small><b>${ROLES[u.role]}</b></div><div><small>Status</small><span class="status s-${u.status}" style="width:max-content">${u.status}</span></div>${u.role==="business"?`<div><small>Industry</small><b>${esc(u.industry)}</b></div><div><small>Campaigns</small><b>${myReqs().length}</b></div>`:u.role==="influencer"?`<div><small>Shoots done</small><b>${myBookings().filter(b=>b.status==="Approved").length}</b></div>`:`<div><small>Department</small><b>${esc(u.dept)}</b></div>`}</div></div>`}</div>`};
+
+/* ---- campaign detail ---- */
+function detailView(r){
+  const u=me(),b=user(r.biz),p=r.pro?user(r.pro):null,ds=S.drafts.filter(d=>d.req===r.id),an=analytics(r),rev=S.reviews.find(x=>x.req===r.id),ms=S.messages.filter(m=>m.req===r.id).slice(-4);
+  const canEditStage=u.role==="employee"||(u.role==="pro"&&r.pro===u.id);
+  const backTo=u.role==="business"?"campaigns":u.role==="pro"?"mywork":"requests";
+  const kit=S.brandkits[r.biz];
+  return `<div class="actions"><button class="btn small ghost" data-act="go" data-arg="${backTo}" type="button">← Back</button><span class="spacer"></span><button class="btn small" data-act="copysummary" data-arg="${r.id}" type="button">Copy summary</button></div>
+  ${head(esc(r.title),`<span class="mono">${r.id}</span> · ${esc(bizName(r.biz))}`,`<span class="status s-${r.stage}" style="font-size:14px;padding:5px 12px">${r.stage}</span>`)}
+  <div class="card" style="display:grid;gap:16px">${pipe(r.stage)}
+   <div class="kv"><div><small>Goal</small><span>${esc(r.goal)}</span></div><div><small>Audience</small><span>${esc(r.audience||"—")}</span></div><div><small>Package</small><b>${r.pkg}</b></div><div><small>Budget</small><b class="num">${rupee(r.budget)}</b></div><div><small>Created</small><span>${fdate(r.created)}</span></div><div><small>Target date</small><span>${fdate(r.deadline)}</span></div><div><small>Assigned manager</small><span>${p?`<b>${esc(p.name)}</b> ${esc(p.handle)}`:"Not assigned yet"}</span></div><div><small>Contact</small><span>${esc(b?.name)}</span></div></div>
+   <div class="chips">${r.platforms.map(x=>`<span class="chip">${x}</span>`).join("")}${r.services.map(x=>`<span class="chip">${x}</span>`).join("")}</div>
+   ${canEditStage?`<div class="actions">${r.stage!=="Live"?`<button class="btn small primary" data-act="advance" data-arg="${r.id}" type="button">Move to ${STAGES[STAGES.indexOf(r.stage)+1]}</button>`:""}${r.stage!=="Submitted"&&u.role==="employee"?`<button class="btn small ghost" data-act="back" data-arg="${r.id}" type="button">Move back</button>`:""}</div>`:""}
+   ${u.role==="pro"&&!r.pro?`<div class="actions"><button class="btn primary" data-act="accept" data-arg="${r.id}" type="button">Accept this campaign</button></div>`:""}</div>
+
+  ${an?`<div class="stats">${stat("Reach, 14 days",an.total.toLocaleString("en-IN"))}${stat("New followers","+"+an.followers.toLocaleString("en-IN"))}${stat("Engagement",an.engagement+"%")}${stat("Leads",an.leads,an.clicks.toLocaleString("en-IN")+" link clicks")}</div>
+  <div class="card"><div class="chead"><h3>Daily reach</h3><span class="muted" style="font-size:13px">Demo numbers</span></div>${lineChart(an.reach,dayLabels(14))}</div>`:""}
+
+  <div class="cols"><div style="display:grid;gap:20px;min-width:0">
+   <div class="card"><div class="chead"><h3>Content drafts (${ds.length})</h3>${u.role==="pro"&&r.pro===u.id&&ui.draftFor!==r.id?`<button class="btn small primary" data-act="newdraft" data-arg="${r.id}" type="button">Submit new draft</button>`:""}</div>
+    ${ui.draftFor===r.id?`<form class="item" data-form="draft" data-arg="${r.id}" style="margin-bottom:12px" novalidate><div class="three"><div class="field"><label for="d-type">Type</label><select id="d-type"><option>Post</option><option>Reel</option><option>Story</option></select></div><div class="field"><label for="d-plat">Platform</label><select id="d-plat">${r.platforms.map(x=>`<option>${x}</option>`).join("")}</select></div><div class="field"><label for="d-date">Post date</label><input id="d-date" type="date" value="${iso(3)}"></div></div>
+     <div class="field"><label for="d-cap">Caption</label><textarea id="d-cap" placeholder="Write the caption…"></textarea></div><div class="field"><label for="d-tags">Hashtags</label><input id="d-tags" value="${esc(kit?.hashtags||"")}"></div><div class="err" id="dErr"></div><div class="actions"><button class="btn primary small" type="submit">Send for approval</button><button class="btn small ghost" data-act="canceldraft" type="button">Cancel</button></div></form>`:""}
+    <div class="list">${ds.map(d=>draftItem(d,u.role==="business"&&r.biz===u.id?approveActions(d):u.role==="pro"&&d.status==="Changes"?`<div class="actions"><button class="btn small" data-act="resubmit" data-arg="${d.id}" type="button">Mark as fixed and resubmit</button></div>`:"")).join("")||`<div class="empty">${r.pro?"No drafts yet. The pro will submit them here.":"Drafts appear once a pro is assigned."}</div>`}</div></div>
+   ${r.stage==="Live"&&u.role==="business"&&r.pro?(rev?`<div class="card"><h3>Your review</h3><p><span class="stars">${starStr(rev.stars)}</span> ${esc(rev.text)}</p></div>`:`<form class="card" data-form="review" data-arg="${r.id}"><h3>Rate ${esc(p.name)}</h3><div class="starpick" role="radiogroup" aria-label="Rating">${[1,2,3,4,5].map(n=>`<button type="button" class="${n<=ui.stars?"on":""}" data-act="star" data-arg="${n}" aria-label="${n} stars">★</button>`).join("")}</div><div class="field" style="margin-top:10px"><label for="rv-text">How was it?</label><textarea id="rv-text" placeholder="Share what went well"></textarea></div><button class="btn primary" type="submit">Submit review</button></form>`):""}
+  </div>
+  <div style="display:grid;gap:20px;min-width:0">
+   <div class="card"><div class="chead"><h3>Research brief</h3>${u.role==="employee"?`<span class="tag t-emp">You can edit</span>`:""}</div>
+    ${u.role==="employee"?`<form data-form="research" data-arg="${r.id}"><div class="field"><label for="rs-a">Audience insights</label><textarea id="rs-a">${esc(r.research.audience)}</textarea></div><div class="field"><label for="rs-c">Competitors</label><textarea id="rs-c">${esc(r.research.competitors)}</textarea></div><div class="field"><label for="rs-h">Suggested hashtags</label><input id="rs-h" value="${esc(r.research.hashtags)}"></div><button class="btn small primary" type="submit">Save brief</button></form>`
+    :r.research.audience||r.research.competitors?`<div style="display:grid;gap:10px;font-size:14px"><div><div class="label">Audience</div>${esc(r.research.audience||"—")}</div><div><div class="label">Competitors</div>${esc(r.research.competitors||"—")}</div><div><div class="label">Hashtags</div><span style="color:var(--info)">${esc(r.research.hashtags||"—")}</span></div></div>`:`<div class="empty">Our research team is preparing this.</div>`}</div>
+   ${kit?`<div class="card"><h3>Brand kit</h3><div style="display:grid;gap:8px;font-size:14px"><div class="row">${kit.colors.map(c=>`<span style="width:28px;height:28px;border-radius:8px;background:${esc(c)};border:1px solid var(--line)"></span>`).join("")}<b style="margin-left:6px">${esc(kit.tone)}</b></div><div><span class="label">Do</span> ${esc(kit.dos)}</div><div><span class="label">Don't</span> ${esc(kit.donts)}</div></div></div>`:""}
+   <div class="card"><div class="chead"><h3>Latest messages</h3><button class="btn small" data-act="openthread" data-arg="${r.id}" type="button">Open chat</button></div><div class="list">${ms.map(m=>`<div style="font-size:14px"><b>${esc(user(m.from)?.name.split(" ")[0])}:</b> ${esc(m.text)} <span class="muted" style="font-size:12px">${ago(m.at)}</span></div>`).join("")||`<div class="empty">No messages yet.</div>`}</div></div>
+   <div class="card"><div class="chead"><h3>Influencer shoots</h3>${u.role!=="influencer"?`<button class="btn small" data-act="bookfromreq" data-arg="${r.id}" type="button">Book influencer</button>`:""}</div><div class="list">${S.bookings.filter(b=>b.req===r.id).map(b=>`<div style="font-size:14px"><b>${esc(user(b.inf).name)}</b> · ${b.deliverable}<br><span class="muted">${fdate(b.date)}, ${b.time}</span> <span class="status s-${b.status}">${b.status}</span></div>`).join("")||`<div class="empty">No influencer booked for this campaign yet.</div>`}</div></div>
+   <div class="card"><h3>Timeline</h3>${feed(S.activity.filter(a=>a.req===r.id).slice(0,8))}</div>
+  </div></div>`}
+
+
+/* ---- business: social accounts & planner ---- */
+function socialsOf(id){if(!S.socials[id]){S.socials[id]={};Object.keys(SOCIALS).forEach(k=>S.socials[id][k]={on:false})}return S.socials[id]}
+V.business_social=u=>{const so=socialsOf(u.id),on=Object.entries(so).filter(([k,v])=>v.on);
+  const total=on.reduce((a,[k,v])=>a+v.followers,0),wk=on.reduce((a,[k,v])=>a+v.growth,0);
+  const sched=myPosts().filter(p=>p.status==="Scheduled").length+S.drafts.filter(d=>req(d.req)?.biz===u.id&&d.status==="Approved"&&d.date>=iso(0)).length;
+  return head("Social accounts","Manage all your social media from one place",`<button class="btn primary" data-act="go" data-arg="planner" type="button">Schedule a post</button>`)+
+  `<div class="stats">${stat("Total followers",total.toLocaleString("en-IN"),`+${wk.toLocaleString("en-IN")} this week`)}${stat("Connected accounts",on.length+" / "+Object.keys(SOCIALS).length)}${stat("Posts scheduled",sched)}${stat("Influencer shoots",myBookings().filter(b=>b.status==="Accepted"||b.status==="Requested").length,"upcoming")}</div>
+  <div class="card"><h3>Your accounts</h3><div class="social">${Object.keys(SOCIALS).map(k=>{const a=so[k]||{on:false};return `<div class="plat"><div class="row"><span class="pl-ic" style="background:${SOCIALS[k]}">${k[0]}</span><div style="min-width:0;flex:1"><b>${k}</b><div class="muted" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.on?esc(a.handle):"Not connected"}</div></div><span class="status s-${a.on?"Connected":"Off"}">${a.on?"Connected":"Off"}</span></div>
+    ${a.on?`<div><span class="big num">${a.followers.toLocaleString("en-IN")}</span> <span class="muted" style="font-size:13px">followers</span></div>${a.growth?`<span class="up">▲ ${a.growth} this week</span>`:`<span class="muted" style="font-size:12px">Entered by hand</span>`}
+    <div class="actions"><button class="btn small" data-act="go" data-arg="planner" type="button">Post</button><button class="btn small ghost" data-act="disconnect" data-arg="${k}" type="button">Disconnect</button></div>`
+    :(ui.connectFor===k?`<form data-form="social" data-arg="${k}" novalidate style="display:grid;gap:8px"><input class="inp" id="sc-handle" placeholder="${k} handle or page name"><input class="inp" id="sc-followers" type="number" min="0" placeholder="Current followers (optional)"><div class="err" id="scErr"></div><div class="actions"><button class="btn small primary" type="submit">Save</button><button class="btn small ghost" data-act="cancelconnect" type="button">Cancel</button></div></form>`
+      :`<p class="muted" style="font-size:13px">Add your ${k} account so your manager and the team know where to post.</p><div class="actions"><button class="btn small primary" data-act="connect" data-arg="${k}" type="button">Add ${k}</button></div>`)}</div>`}).join("")}</div>
+  <p class="muted" style="font-size:13px;margin-top:12px">Automatic posting and live follower numbers arrive in the next update, when BrandBay signs in to each platform. For now, accounts and follower counts are entered by hand.</p></div>
+  ${on.length?`<div class="card"><h3>Followers by platform</h3>${bars(on.map(([k,v])=>({label:k,value:v.followers,color:SOCIALS[k]})),v=>v.toLocaleString("en-IN"))}</div>`:""}`};
+
+V.business_planner=u=>{const so=socialsOf(u.id),on=Object.keys(so).filter(k=>so[k].on);
+  const own=myPosts().map(p=>({...p,src:"You"})),fromMgr=S.drafts.filter(d=>req(d.req)?.biz===u.id&&d.status==="Approved").map(d=>({id:d.id,platform:d.platform,type:d.type,caption:d.caption,hashtags:d.hashtags,date:d.date,time:"—",status:d.date<iso(0)?"Posted":"Scheduled",src:user(d.pro)?.name||"Manager",mgr:true}));
+  const all=[...own,...fromMgr].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));const up=all.filter(p=>p.status==="Scheduled"),past=all.filter(p=>p.status==="Posted").reverse();
+  const row=p=>`<div class="item"><div class="draft"><div class="thumb th-${p.type}">${p.type}</div><div style="display:grid;gap:6px;min-width:0"><div class="hd"><div class="meta"><b style="color:var(--ink)">${esc(p.platform)}</b><span>${fdate(p.date)}${p.time!=="—"?", "+p.time:""}</span><span>By ${esc(p.src)}</span></div><span class="status s-${p.status}">${p.status}</span></div><p class="caption">${esc(p.caption)}</p>${p.hashtags?`<div class="meta" style="color:var(--info)">${esc(p.hashtags)}</div>`:""}
+    ${!p.mgr&&p.status==="Scheduled"?`<div class="actions"><button class="btn small okb" data-act="postnow" data-arg="${p.id}" type="button">Mark as posted</button><button class="btn small ghost" data-act="delpost" data-arg="${p.id}" type="button">Delete</button></div>`:""}</div></div></div>`;
+  return head("Post planner","Create and schedule your own posts")+`<div class="cols"><div style="display:grid;gap:20px;min-width:0"><div class="card"><h3>Scheduled (${up.length})</h3><div class="list">${up.map(row).join("")||`<div class="empty">Nothing scheduled. Create a post with the form.</div>`}</div></div>
+  <div class="card"><h3>Published</h3><div class="list">${past.slice(0,5).map(row).join("")||`<div class="empty">No published posts yet.</div>`}</div></div></div>
+  ${on.length?`<form class="card" data-form="post" novalidate><h3>New post</h3>
+   <div class="two"><div class="field"><label for="p-plat">Platform</label><select id="p-plat">${on.map(k=>`<option>${k}</option>`).join("")}</select></div><div class="field"><label for="p-type">Type</label><select id="p-type"><option>Post</option><option>Reel</option><option>Story</option></select></div></div>
+   <div class="two"><div class="field"><label for="p-date">Date</label><input id="p-date" type="date" value="${iso(1)}" min="${iso(0)}"></div><div class="field"><label for="p-time">Time</label><input id="p-time" type="time" value="18:00"></div></div>
+   <div class="field"><label for="p-cap">Caption</label><textarea id="p-cap" placeholder="What do you want to say?"></textarea></div>
+   <div class="field"><label for="p-tags">Hashtags</label><input id="p-tags" value="${esc(S.brandkits[u.id]?.hashtags||"")}"></div>
+   <div class="err" id="pErr"></div><button class="btn primary" type="submit" style="width:100%">Schedule post</button>
+   <p class="muted" style="font-size:12px;margin-top:8px">BrandBay keeps your schedule. Until automatic posting arrives, post it yourself at the scheduled time and mark it as posted.</p></form>`
+  :`<div class="card"><h3>New post</h3><div class="empty">Connect at least one account to start posting.<br><br><button class="btn small primary" data-act="go" data-arg="social" type="button">Connect accounts</button></div></div>`}</div>`};
+
+/* ---- influencers: directory + bookings (business, manager, team) ---- */
+function bookingItem(b){const u=me(),i=user(b.inf),mine=u.role!=="influencer";
+  let act="";
+  if(u.role==="influencer"){
+    if(b.status==="Requested")act=`<div class="actions"><button class="btn small okb" data-act="bkaccept" data-arg="${b.id}" type="button">Accept shoot</button><button class="btn small badb" data-act="bkdecline" data-arg="${b.id}" type="button">Decline</button></div>`;
+    else if(b.status==="Accepted"||b.status==="Reshoot")act=ui.uploadFor===b.id?`<form data-form="upload" data-arg="${b.id}" class="item" style="background:var(--surface)" novalidate><div class="field"><label for="up-link">Link to your video or post</label><input id="up-link" placeholder="https://instagram.com/reel/…"></div><div class="field"><label for="up-cap">Caption you used</label><input id="up-cap" placeholder="Caption with brand tag"></div><div class="field"><label for="up-file">Or attach the video file</label><input id="up-file" type="file" accept="video/*,image/*"></div><div class="err" id="upErr"></div><div class="actions"><button class="btn small primary" type="submit">Upload for review</button><button class="btn small ghost" data-act="cancelupload" type="button">Cancel</button></div></form>`
+      :`<div class="actions"><button class="btn small primary" data-act="openupload" data-arg="${b.id}" type="button">${b.status==="Reshoot"?"Upload new version":"Upload content"}</button></div>`;
+  }else{
+    if(b.status==="Uploaded")act=ui.reshootFor===b.id?`<form data-form="reshoot" data-arg="${b.id}" class="actions" novalidate><input class="inp" id="rs-fb" placeholder="What should the influencer change?" style="flex:1;min-width:180px"><button class="btn small badb" type="submit">Send</button><button class="btn small ghost" data-act="cancelreshoot" type="button">Cancel</button></form>`
+      :`<div class="actions"><button class="btn small okb" data-act="bkapprove" data-arg="${b.id}" type="button">Approve (₹${b.fee.toLocaleString("en-IN")})</button><button class="btn small" data-act="bkreshoot" data-arg="${b.id}" type="button">Ask for changes</button></div>`;
+    else if(b.status==="Requested"||b.status==="Accepted")act=`<div class="actions"><button class="btn small" data-act="bkremind" data-arg="${b.id}" type="button">Send reminder</button><button class="btn small ghost" data-act="bkcancel" data-arg="${b.id}" type="button">Cancel booking</button></div>`;
+  }
+  return `<div class="item"><div class="hd"><div class="row" style="align-items:flex-start"><span class="av" style="cursor:default;background:linear-gradient(135deg,var(--ok),var(--violet))">${initials(u.role==="influencer"?bizName(b.biz):i.name)}</span><div><b>${b.deliverable} · ${esc(u.role==="influencer"?bizName(b.biz):i.name)}</b><div class="meta"><span class="mono">${b.id}</span>${u.role==="influencer"?"":`<span>${esc(i.handle)}</span><span>for ${esc(bizName(b.biz))}</span>`}${b.req?`<span>${esc(req(b.req)?.title||"")}</span>`:""}</div></div></div><span class="status s-${b.status}">${b.status==="Reshoot"?"Changes asked":b.status}</span></div>
+  <div class="meta" style="color:var(--ink);font-size:14px"><span>📅 <b>${new Date(b.date).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}, ${b.time}</b></span><span>📍 ${esc(b.location)}</span><span class="num">💰 ${rupee(b.fee)}</span></div>
+  ${b.brief?`<div class="meta">Brief: ${esc(b.brief)}</div>`:""}
+  ${b.link||b.path?`<div style="font-size:14px;display:grid;gap:4px">Uploaded:${b.link?` <a class="uplink" href="${esc(b.link)}" target="_blank" rel="noopener">${esc(b.link)}</a>`:""}${b.path?`<div><button class="btn small" data-act="openfile" data-arg="${esc(b.path)}" type="button">▶ Open video</button></div>`:""}${b.caption?`<div class="muted">“${esc(b.caption)}”</div>`:""}</div>`:""}
+  ${b.feedback&&b.status==="Reshoot"?`<div class="feedback">Feedback: ${esc(b.feedback)}</div>`:""}${act}</div>`}
+
+function bookForm(u){const i=user(ui.bookFor);if(!i)return"";const reqs=u.role==="business"?myReqs():myReqs().filter(r=>r.stage!=="Live");const pre=ui.bookReq?req(ui.bookReq):null;
+  const loc=u.role==="business"?u.address||u.company:pre?user(pre.biz)?.address||"":"";
+  return `<form class="card" data-form="book" novalidate style="border-color:var(--accent)"><div class="chead"><h3>Book ${esc(i.name)} <span class="muted" style="font-weight:500;font-size:14px">${esc(i.handle)} · ${esc(i.followers)} followers</span></h3><button class="btn small ghost" data-act="cancelbook" type="button">Close</button></div>
+  <div class="two"><div class="field"><label for="b-req">Campaign ${u.role==="business"?"(optional)":""}</label><select id="b-req" data-change="bkreq">${u.role==="business"?`<option value="">Not linked to a campaign</option>`:""}${reqs.map(r=>`<option value="${r.id}" ${pre&&pre.id===r.id?"selected":""}>${esc(r.title)} · ${esc(bizName(r.biz))}</option>`).join("")}</select></div>
+  <div class="field"><label for="b-del">What to shoot</label><select id="b-del">${DELIVERABLES.map(d=>`<option>${d}</option>`).join("")}</select></div></div>
+  <div class="three"><div class="field"><label for="b-date">Shoot date</label><input id="b-date" type="date" value="${iso(3)}" min="${iso(0)}"></div><div class="field"><label for="b-time">Time</label><input id="b-time" type="time" value="16:00"></div><div class="field"><label for="b-fee">Fee (₹)</label><input id="b-fee" type="number" value="${i.rate||5000}"></div></div>
+  <div class="field"><label for="b-loc">Shoot location</label><input id="b-loc" value="${esc(loc)}" placeholder="Outlet address"></div>
+  <div class="field"><label for="b-brief">Brief for the influencer</label><textarea id="b-brief" placeholder="What to show, offers to mention, tags to use"></textarea></div>
+  <div class="err" id="bErr"></div><button class="btn primary" type="submit">Send booking to ${esc(i.name.split(" ")[0])}</button>
+  <p class="muted" style="font-size:12px;margin-top:8px">${esc(i.name.split(" ")[0])} gets a notification with the date, time and address, and can accept or decline.</p></form>`}
+
+V.influencers=u=>{const all=S.users.filter(x=>x.role==="influencer"&&x.status==="Active");
+  const list=all.filter(x=>ui.infCat==="All"||x.category===ui.infCat).filter(x=>ui.infCity==="All"||x.city===ui.infCity);
+  const bks=myBookings().sort((a,b)=>{const o={Uploaded:0,Requested:1,Accepted:2,Reshoot:3};return (o[a.status]??9)-(o[b.status]??9)||b.date.localeCompare(a.date)});
+  const review=bks.filter(b=>b.status==="Uploaded").length;
+  return head(u.role==="employee"?"Influencer bookings":"Influencers",u.role==="employee"?"Every shoot on the platform":"Book creators to shoot at your place")+
+  `<div class="stats">${stat("Influencers",all.length,"verified on BrandBay")}${stat("Waiting to accept",bks.filter(b=>b.status==="Requested").length)}${stat("Upcoming shoots",bks.filter(b=>b.status==="Accepted").length)}${stat("To review",review,"uploaded content")}</div>
+  ${ui.bookFor?bookForm(u):""}
+  <div class="card"><div class="chead"><h3>Bookings</h3></div><div class="list">${bks.map(bookingItem).join("")||`<div class="empty">No bookings yet. Pick an influencer below and book a shoot.</div>`}</div></div>
+  <div class="card"><div class="chead"><h3>Find influencers</h3><div class="toolbar" style="margin:0"><select data-change="infcat" aria-label="Category">${["All",...INFCATS].map(c=>`<option ${c===ui.infCat?"selected":""}>${c==="All"?"All categories":c}</option>`).join("")}</select><select data-change="infcity" aria-label="City">${["All",...CITIES].map(c=>`<option ${c===ui.infCity?"selected":""}>${c==="All"?"All cities":c}</option>`).join("")}</select></div></div>
+  <div class="icards">${list.map(x=>`<div class="icard"><div class="row"><span class="av" style="cursor:default;background:linear-gradient(135deg,var(--ok),var(--violet))">${initials(x.name)}</span><div style="min-width:0"><b>${esc(x.name)}</b><span class="mono muted">${esc(x.handle)}</span></div></div>
+   <div class="chips"><span class="chip">${esc(x.category)}</span><span class="chip">${esc(x.city)}</span></div><p class="muted" style="font-size:13px">${esc(x.bio)}</p>
+   <dl><dt>Followers</dt><dd>${esc(x.followers)}</dd><dt>Fee per shoot</dt><dd>${rupee(x.rate)}</dd><dt>Shoots done</dt><dd>${S.bookings.filter(b=>b.inf===x.id&&b.status==="Approved").length}</dd></dl>
+   <button class="btn small primary" data-act="book" data-arg="${x.id}" type="button">Book a shoot</button></div>`).join("")||`<div class="empty">No influencers match these filters.</div>`}</div></div>`};
+V.employee_bookings=V.influencers;
+
+/* ---- influencer portal ---- */
+V.influencer_overview=u=>{const bks=myBookings(),nxt=bks.filter(b=>b.status==="Accepted"&&b.date>=iso(0)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))[0];
+  const reqs=bks.filter(b=>b.status==="Requested"),todo=bks.filter(b=>b.status==="Accepted"&&b.date<=iso(0)||b.status==="Reshoot");
+  const earned=bks.filter(b=>b.status==="Approved").reduce((a,b)=>a+b.fee,0);
+  return head(`Hi, ${esc(u.name.split(" ")[0])}`,`${esc(u.handle)} · ${esc(u.followers)} followers`)+
+  (u.status==="Unverified"?`<div class="card" style="border-color:var(--warn)"><b>Your profile is being verified.</b> <span class="muted">Brands can book you once the BrandBay team verifies your account.</span></div>`:"")+
+  `<div class="stats">${stat("New requests",reqs.length,"accept or decline")}${stat("Upcoming shoots",bks.filter(b=>b.status==="Accepted").length)}${stat("To upload",todo.length)}${stat("Earned",rupee(earned),"from approved shoots")}</div>
+  ${nxt?`<div class="next"><span class="label">Your next shoot</span><h3>${esc(bizName(nxt.biz))} · ${nxt.deliverable}</h3><p>📅 ${new Date(nxt.date).toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"})} at ${nxt.time}</p><p>📍 ${esc(nxt.location)}</p>${nxt.brief?`<p style="font-size:14px">Brief: ${esc(nxt.brief)}</p>`:""}</div>`:""}
+  <div class="card"><div class="chead"><h3>New shoot requests (${reqs.length})</h3><button class="btn small" data-act="go" data-arg="bookings" type="button">All shoots</button></div><div class="list">${reqs.map(bookingItem).join("")||`<div class="empty">No new requests. Brands will book you here.</div>`}</div></div>`};
+V.influencer_bookings=u=>{const bks=myBookings().sort((a,b)=>b.date.localeCompare(a.date));const groups=[["To do",bks.filter(b=>["Requested","Accepted","Reshoot"].includes(b.status))],["Waiting for brand review",bks.filter(b=>b.status==="Uploaded")],["Completed",bks.filter(b=>["Approved","Declined","Cancelled"].includes(b.status))]];
+  return head("My shoots","Accept, shoot, upload, get paid")+groups.map(([t,l])=>`<div class="card"><h3>${t} (${l.length})</h3><div class="list">${l.map(bookingItem).join("")||`<div class="empty">Nothing here.</div>`}</div></div>`).join("")};
+V.influencer_earnings=u=>{const bks=myBookings().filter(b=>!["Declined","Cancelled"].includes(b.status));const paid=bks.filter(b=>b.status==="Approved").reduce((a,b)=>a+b.fee,0),pend=bks.filter(b=>b.status!=="Approved").reduce((a,b)=>a+b.fee,0);
+  return head("Earnings","The BrandBay team pays you after the brand approves your content")+`<div class="stats" style="grid-template-columns:repeat(3,1fr)">${stat("Approved",rupee(paid),"payment due to you")}${stat("Pending",rupee(pend),"after approval")}${stat("Shoots",bks.length)}</div>
+  <div class="card"><div class="tablewrap"><table><thead><tr><th>Shoot</th><th>Brand</th><th>Date</th><th>Fee</th><th>Status</th></tr></thead><tbody>${bks.map(b=>`<tr><td><b>${b.deliverable}</b><br><span class="mono muted">${b.id}</span></td><td>${esc(bizName(b.biz))}</td><td>${fdate(b.date)}</td><td class="num">${rupee(b.fee)}</td><td><span class="status s-${b.status}">${b.status}</span></td></tr>`).join("")||`<tr><td colspan="5"><div class="empty">No shoots yet.</div></td></tr>`}</tbody></table></div></div>`};
+
+/* ================= ACTIONS ================= */
+/* ================= TERMS & PRIVACY (draft for review) ================= */
+const LEGAL_UPDATED="5 November 2026";
+const ph=t=>`<mark class="ph">[${t}]</mark>`;
+function legalPage(title,intro,sections){return `<div class="wrap"><article class="legal">
+  <div class="draftnote"><b>Draft for review.</b> This page has not been checked by a lawyer yet. Highlighted parts still need to be filled in.</div>
+  <h1>${title}</h1><p class="muted">Last updated ${LEGAL_UPDATED}</p><p>${intro}</p>
+  ${sections.map(([h,b],i)=>`<section><h2>${i+1}. ${h}</h2>${b}</section>`).join("")}
+  <p class="muted" style="margin-top:28px">See also the <a href="#${title.startsWith("Terms")?"privacy":"terms"}">${title.startsWith("Terms")?"Privacy Policy":"Terms of Use"}</a>.</p>
+</article></div>`}
+const ul=items=>`<ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`;
+
+function termsView(){return legalPage("Terms of Use",
+  `These terms explain the rules for using BrandBay, a platform where businesses get their marketing done with social media managers, influencers and the BrandBay team. BrandBay is run by ${ph("company legal name")}. By creating an account, you agree to these terms.`,[
+  ["Your account",ul([
+    "You must be at least 18 years old to create an account.",
+    "Give accurate details when you register, and keep them up to date.",
+    "Keep your password private. You are responsible for what happens under your account.",
+    "Social media managers and influencers can take work only after the BrandBay team verifies their account.",
+    "We may suspend an account that breaks these terms, gives false information or harms other users."])],
+  ["What each role agrees to",`<p><b>Businesses</b> describe their campaign honestly, review drafts and uploads promptly, and are responsible for the offers, prices and claims they ask us to promote.</p>
+   <p><b>Social media managers</b> deliver the work they accept, follow the business's brand kit, and only submit content they have the right to use.</p>
+   <p><b>Influencers</b> turn up for shoots they accept, at the agreed date, time and place, and upload the agreed content. Paid or sponsored posts must be clearly labelled as advertising, as required by the ASCI influencer guidelines (for example with #ad or #collab).</p>`],
+  ["Content and approvals",ul([
+    "Drafts and influencer uploads are shared with the business for approval. Nothing is marked as approved without the business's say.",
+    "Whoever uploads content confirms they own it or have permission to use it, including music, images and people shown in it.",
+    `Once a business has paid for a campaign or shoot, it may use the approved content for its own marketing. ${ph("Confirm content ownership terms with the team")}`])],
+  ["Payments",ul([
+    "Each campaign request creates an invoice for the agreed budget.",
+    "Until online payment is added, invoices are paid directly to the BrandBay team, who mark them as paid in the portal.",
+    "Influencer fees are paid by the BrandBay team after the business approves the uploaded content.",
+    `Refunds and cancellations: ${ph("refund and cancellation policy")}`])],
+  ["Acceptable use",ul([
+    "Do not post anything illegal, misleading, hateful, sexually explicit or harmful.",
+    "Do not harass other users or share their personal details.",
+    "Do not try to access accounts, data or parts of the portal that aren't yours.",
+    "Do not arrange work found on BrandBay outside the platform to avoid its fees."])],
+  ["Other platforms","<p>BrandBay helps you market on Instagram, Facebook, YouTube and other platforms. Those platforms have their own rules, which you must also follow. BrandBay is not part of or endorsed by any of them.</p>"],
+  ["Results","<p>We work hard on every campaign, but we cannot guarantee specific results such as followers, reach, sales or footfall.</p>"],
+  ["Our responsibility",`<p>BrandBay is provided as it is. As far as the law allows, we are not responsible for indirect losses, or for losses caused by other users or third-party platforms. Our total responsibility to you is limited to the amount you paid us in the three months before the claim. ${ph("Have this clause reviewed")}</p>`],
+  ["Closing your account",`<p>You can ask us to close your account at any time by writing to ${ph("support email")}. Invoices that are already due must still be paid.</p>`],
+  ["Changes to these terms","<p>We may update these terms. If the changes are important, we will tell you in the portal before they apply.</p>"],
+  ["Law and disputes",`<p>These terms follow the laws of India. Disputes will be handled by the courts in ${ph("city, for example Hyderabad")}.</p>`],
+  ["Contact",`<p>Questions about these terms: ${ph("support email")}.</p>`]
+])}
+
+function privacyView(){return legalPage("Privacy Policy",
+  `This policy explains what personal information BrandBay collects, why, and who can see it. BrandBay is run by ${ph("company legal name")}. We follow India's Digital Personal Data Protection Act, 2023.`,[
+  ["What we collect",ul([
+    "<b>Account details:</b> name, email, phone number, password (stored only in scrambled form), and your role.",
+    "<b>Profile details:</b> for businesses, the business name, industry, social handle and outlet address. For managers and influencers, handle, follower count, niche or category, city and fees.",
+    "<b>Work on the platform:</b> campaign requests, drafts, messages, bookings, reviews, brand kits, scheduled posts and the files influencers upload.",
+    "<b>Billing records:</b> invoice amounts and whether they are paid. We do not collect card or bank details.",
+    "<b>Technical details:</b> your browser keeps you logged in and remembers your light or dark mode choice."])],
+  ["How we use it",ul([
+    "To run your account and the features you use.",
+    "To connect businesses with the right managers and influencers.",
+    "To send you notifications, such as shoot details, approvals and payment reminders.",
+    "To keep the platform safe and to verify new managers and influencers.",
+    "We do not sell your personal information, and we do not use it for outside advertising."])],
+  ["Who can see your information",ul([
+    "Other users see your name, business or handle, and the details needed for the work, such as an outlet address for a shoot.",
+    "Other users do <b>not</b> see your email or phone number.",
+    "A business's campaigns, invoices and files are visible only to that business, the manager assigned to it, the influencers booked for it, and the BrandBay team.",
+    "The BrandBay team can see all accounts and activity, so it can run and support the platform."])],
+  ["Services we use",`<p>We use trusted providers to run BrandBay. They handle data only to provide their service to us:</p>${ul([
+    "<b>Supabase:</b> database, login and file storage.",
+    "<b>Netlify:</b> hosts the website.",
+    "<b>jsDelivr</b> and <b>Google Fonts:</b> deliver code and fonts to your browser, so they see your internet address.",
+    "Later, a payment provider (such as Razorpay) and an email or WhatsApp service, which we will add to this list."])}`],
+  ["How long we keep it",`<p>We keep your information while your account is open. When you close your account, we delete or anonymise your personal information within ${ph("number")} days, except records we must keep by law, such as invoices.</p>`],
+  ["Your rights",`<p>You can ask to see, correct or delete your personal information, or withdraw your consent, by writing to ${ph("support email")}. You can also complain to India's Data Protection Board. Our grievance officer is ${ph("name and email of grievance officer")}.</p>`],
+  ["Security","<p>Access is controlled so each person sees only what their role allows, and connections to BrandBay are encrypted. No system is perfectly secure, so tell us right away if you notice anything wrong with your account.</p>"],
+  ["Children","<p>BrandBay is only for people aged 18 or over. We do not knowingly collect information from children.</p>"],
+  ["Changes to this policy","<p>If we change this policy in an important way, we will tell you in the portal before it applies.</p>"],
+  ["Contact",`<p>Privacy questions: ${ph("support email")}.</p>`]
+])}
+
+const A={
+  go:a=>go(a),
+  reg:a=>{ui.regRole=a;go("register")},
+  logout:async()=>{const t=me()?.role==="employee";await endSession();toast("Logged out");go(t?"team":"home")},
+  theme:()=>{const t=isDark()?"light":"dark";document.documentElement.dataset.theme=t;try{localStorage.setItem("brandbay-theme",t)}catch(e){}renderTop()},
+  bell:()=>{ui.showNotif=!ui.showNotif;ui.showMenu=false;renderTop()},
+  menu:()=>{ui.showMenu=!ui.showMenu;ui.showNotif=false;renderTop()},
+  readall:()=>run(()=>q(sb.from("notifications").update({read:true}).eq("user_id",S.current).eq("read",false))),
+  opennotif:a=>{const n=S.notifs[a];if(!n)return;if(!n.read){n.read=true;sb.from("notifications").update({read:true}).eq("id",n.dbid).then(()=>{})}go(n.link)},
+  campfilter:a=>{ui.campFilter=a;render()},
+  protab:a=>{ui.proTab=a;render()},
+  userrole:a=>{ui.userRole=a;render()},
+  cal:a=>{ui.calMonth=a||null;render()},
+  thread:a=>{ui.thread=a;render()},
+  openthread:a=>{ui.thread=a;go("messages")},
+  approve:a=>{const d=S.drafts.find(x=>x.id===a);run(()=>q(sb.from("drafts").update({status:"Approved"}).eq("id",d.dbid)),"Approved. It's scheduled for "+fdate(d.date))},
+  askchanges:a=>{ui.changesFor=a;render();$("#fb-"+a)?.focus()},
+  cancelchanges:()=>{ui.changesFor=null;render()},
+  resubmit:a=>{const d=S.drafts.find(x=>x.id===a);run(()=>q(sb.from("drafts").update({status:"Pending",feedback:null}).eq("id",d.dbid)),"Resubmitted for approval")},
+  accept:async a=>{const r=req(a);if(await run(()=>q(sb.from("campaigns").update(Object.assign({manager_id:S.current},r.stage==="Submitted"?{stage:"Research"}:{})).eq("id",r.dbid)),"Campaign accepted"))go("c-"+a)},
+  advance:a=>{const r=req(a),i=STAGES.indexOf(r.stage);if(i>=3)return;run(()=>q(sb.from("campaigns").update({stage:STAGES[i+1]}).eq("id",r.dbid)),"Moved to "+STAGES[i+1])},
+  back:a=>{const r=req(a),i=STAGES.indexOf(r.stage);if(i<=0)return;run(()=>q(sb.from("campaigns").update({stage:STAGES[i-1]}).eq("id",r.dbid)),"Moved back to "+STAGES[i-1])},
+  assignbtn:a=>{const[rid,pid]=a.split("|");doAssign(rid,pid)},
+  verify:a=>{const x=user(a);run(()=>q(sb.from("profiles").update({status:"Active"}).eq("id",a)),x.name+" is now active")},
+  suspend:a=>{const x=user(a);run(()=>q(sb.from("profiles").update({status:"Suspended"}).eq("id",a)),x.name+" suspended")},
+  markpaid:a=>{const i=S.invoices.find(x=>x.id===a);run(()=>q(sb.from("invoices").update({status:"Paid"}).eq("id",i.dbid)),i.id+" marked as paid")},
+  remind:a=>{const i=S.invoices.find(x=>x.id===a);run(()=>q(sb.rpc("remind_invoice",{iid:i.dbid})),"Reminder sent to "+bizName(i.biz))},
+  newdraft:a=>{ui.draftFor=a;render();$("#d-cap")?.focus()},
+  canceldraft:()=>{ui.draftFor=null;render()},
+  star:a=>{ui.stars=+a;$$(".starpick button").forEach((b,i)=>b.classList.toggle("on",i<ui.stars))},
+  copy:a=>copyText(ui.gen.out[a],"Caption copied"),
+  copysummary:a=>{const r=req(a);copyText(`${r.title} (${r.id})\nBusiness: ${bizName(r.biz)}\nStage: ${r.stage}\nManager: ${user(r.pro)?.name||"Not assigned"}\nBudget: ${rupee(r.budget)} · Package: ${r.pkg}\nGoal: ${r.goal}\nDrafts: ${S.drafts.filter(d=>d.req===r.id).length} (${S.drafts.filter(d=>d.req===r.id&&d.status==="Approved").length} approved)`,"Summary copied")},
+  copyreport:()=>{const R=S.requests;copyText(`BrandBay weekly report\nCampaigns: ${R.length} (${STAGES.map(s=>s+" "+R.filter(r=>r.stage===s).length).join(", ")})\nUnassigned: ${R.filter(r=>!r.pro).length}\nCollected: ${rupee(S.invoices.filter(i=>i.status==="Paid").reduce((a,i)=>a+i.amount,0))}\nOutstanding: ${rupee(S.invoices.filter(i=>i.status==="Due").reduce((a,i)=>a+i.amount,0))}\nDrafts pending approval: ${S.drafts.filter(d=>d.status==="Pending").length}`,"Report copied")},
+  connect:a=>{ui.connectFor=a;render();$("#sc-handle")?.focus()},
+  cancelconnect:()=>{ui.connectFor=null;render()},
+  disconnect:a=>run(()=>q(sb.from("social_accounts").update({connected:false}).eq("business_id",S.current).eq("platform",a)),a+" removed"),
+  postnow:a=>{const p=S.posts.find(x=>x.id===a);run(()=>q(sb.from("posts").update({status:"Posted"}).eq("id",p.dbid)),"Marked as posted")},
+  delpost:(a,t)=>{if(!t.dataset.armed){t.dataset.armed=1;t.textContent="Click again to delete";return}const p=S.posts.find(x=>x.id===a);run(()=>q(sb.from("posts").delete().eq("id",p.dbid)),"Post deleted")},
+  book:a=>{ui.bookFor=a;ui.bookReq=null;render();window.scrollTo({top:0,behavior:"smooth"})},
+  bookfromreq:a=>{ui.bookFor=S.users.find(x=>x.role==="influencer"&&x.status==="Active")?.id||null;ui.bookReq=a;if(!ui.bookFor)toast("No verified influencers yet. The team needs to verify one first.");go(me().role==="employee"?"bookings":"influencers")},
+  cancelbook:()=>{ui.bookFor=null;render()},
+  bkaccept:a=>{const b=bk(a);run(()=>q(sb.from("bookings").update({status:"Accepted"}).eq("id",b.dbid)),"Shoot accepted. It's in your calendar.")},
+  bkdecline:(a,t)=>{if(!t.dataset.armed){t.dataset.armed=1;t.textContent="Click again to decline";return}const b=bk(a);run(()=>q(sb.from("bookings").update({status:"Declined"}).eq("id",b.dbid)),"Shoot declined")},
+  openupload:a=>{ui.uploadFor=a;render();$("#up-link")?.focus()},
+  cancelupload:()=>{ui.uploadFor=null;render()},
+  openfile:async a=>{try{const {data,error}=await sb.storage.from("uploads").createSignedUrl(a,3600);if(error)throw error;window.open(data.signedUrl,"_blank","noopener")}catch(e){toast(friendly(e))}},
+  bkapprove:a=>{const b=bk(a);run(()=>q(sb.from("bookings").update({status:"Approved"}).eq("id",b.dbid)),"Approved. "+user(b.inf)?.name+" has been told.")},
+  bkreshoot:a=>{ui.reshootFor=a;render();$("#rs-fb")?.focus()},
+  cancelreshoot:()=>{ui.reshootFor=null;render()},
+  bkremind:a=>{const b=bk(a);run(()=>q(sb.rpc("remind_booking",{bid:b.dbid})),"Reminder sent to "+(user(b.inf)?.name||"the influencer"))},
+  bkcancel:(a,t)=>{if(!t.dataset.armed){t.dataset.armed=1;t.textContent="Click again to cancel";return}const b=bk(a);run(()=>q(sb.from("bookings").update({status:"Cancelled"}).eq("id",b.dbid)),"Booking cancelled")}
+};
+function doAssign(rid,pid){const r=req(rid);const ch={manager_id:pid||null};if(pid&&r.stage==="Submitted")ch.stage="Research";
+  return run(()=>q(sb.from("campaigns").update(ch).eq("id",r.dbid)),pid?(user(pid)?.name||"Manager")+" assigned":"Manager removed")}
+function copyText(t,msg){try{navigator.clipboard.writeText(t).then(()=>toast(msg),()=>fallbackCopy(t,msg))}catch(e){fallbackCopy(t,msg)}}
+function fallbackCopy(t,msg){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast(msg)}catch(e){toast("Select the text to copy it")}ta.remove()}
+
+/* ---- change / input handlers ---- */
+const C={
+  regrole:t=>{ui.regRole=t.value;$("#roleFields").innerHTML=roleFields(ui.regRole)},
+  pkg:t=>{$("#pkgDesc").textContent=PACKAGES[t.value].desc;if(PACKAGES[t.value].price)$("#q-budget").value=PACKAGES[t.value].price},
+  mkplat:t=>{ui.mkPlat=t.value;render()},
+  mkmin:t=>{ui.mkMin=+t.value;render()},
+  reqstage:t=>{ui.reqStage=t.value;render()},
+  infcat:t=>{ui.infCat=t.value;render()},
+  infcity:t=>{ui.infCity=t.value;render()},
+  bkreq:t=>{const r=req(t.value);if(r&&me().role!=="business"){const a=user(r.biz)?.address;if(a)$("#b-loc").value=a}},
+  assign:t=>{doAssign(t.dataset.arg,t.value)},
+  stage:t=>{const r=req(t.dataset.arg);run(()=>q(sb.from("campaigns").update({stage:t.value}).eq("id",r.dbid)),"Stage updated")}
+};
+const I={mk:t=>{ui.mkSearch=t.value},rq:t=>{ui.reqSearch=t.value}};
+
+/* ---- forms (all async; the submit handler blocks double clicks) ---- */
+const val=id=>($("#"+id)?.value||"").trim();
+async function signInAs(email,password,errEl,team){
+  const E=m=>{$(errEl).textContent=m};
+  if(!email)return E(team?"Enter your work email.":"Enter your email.");
+  if(!password)return E("Enter your password.");
+  const {data,error}=await sb.auth.signInWithPassword({email,password});
+  if(error)return E(/invalid login/i.test(error.message)?"Wrong email or password. Check and try again.":friendly(error));
+  let p;try{p=await q(sb.from("profiles").select("*").eq("id",data.user.id).single())}catch(e){await sb.auth.signOut();return E(friendly(e))}
+  if(team&&p.role!=="employee"){await sb.auth.signOut();return E("This email isn't a BrandBay team account. Businesses, managers and influencers log in on the main page.")}
+  if(!team&&p.role==="employee"){await sb.auth.signOut();return E("Team members log in at the team link ("+TEAM_URL+"). Use 'team login' below.")}
+  if(p.status==="Suspended"){await sb.auth.signOut();return E("This account is suspended. Contact the BrandBay team.")}
+  await startSession(data.user.id);toast("Welcome, "+p.name.split(" ")[0]+"!");go("overview");
+}
+function forgotView(){return `<div class="wrap"><div class="card auth">
+  <h2>Reset your password</h2><p class="sub">Enter the email you registered with. We'll send you a link to set a new password.</p>
+  <form data-form="forgot" id="forgotForm" novalidate><div class="field"><label for="f-email">Email</label><input id="f-email" type="email" placeholder="you@example.com" autocomplete="email"></div>
+  <div class="err" id="fErr"></div><button class="btn primary" type="submit" style="width:100%">Send reset link</button></form>
+  <p class="muted" style="margin-top:16px;font-size:14px">Remembered it? <button class="linkbtn" data-act="go" data-arg="login" type="button">Back to log in</button></p>
+</div></div>`}
+function resetView(){return `<div class="wrap"><div class="card auth">
+  <h2>Set a new password</h2><p class="sub">Choose a new password for your BrandBay account.</p>
+  <form data-form="newpass" novalidate><div class="field"><label for="n-pass">New password</label><input id="n-pass" type="password" placeholder="At least 6 characters" autocomplete="new-password"></div>
+  <div class="field"><label for="n-pass2">Type it again</label><input id="n-pass2" type="password" autocomplete="new-password"></div>
+  <div class="err" id="nErr"></div><button class="btn primary" type="submit" style="width:100%">Save new password</button></form>
+</div></div>`}
+const F={
+  forgot:async()=>{const email=val("f-email"),E=m=>{$("#fErr").textContent=m};
+    if(!/^\S+@\S+\.\S+$/.test(email))return E("Enter a valid email, like you@example.com.");
+    if(location.protocol==="file:")return E("Password reset links only work on the live website link, not on a file opened from your computer.");
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    if(error)return E(/rate limit/i.test(error.message)?"Too many reset emails were sent just now. Please wait an hour and try again.":friendly(error));
+    $("#forgotForm").innerHTML=`<div class="empty"><b>Check your email.</b><br>If ${esc(email)} has a BrandBay account, a reset link is on its way. It can take a few minutes.</div>`},
+  newpass:async()=>{const a=$("#n-pass").value,b=$("#n-pass2").value,E=m=>{$("#nErr").textContent=m};
+    if(a.length<6)return E("Password needs at least 6 characters.");if(a!==b)return E("The two passwords don't match.");
+    const {data,error}=await sb.auth.updateUser({password:a});
+    if(error)return E(/expired|invalid|session/i.test(error.message)?"This reset link has expired. Ask for a new one from the login page.":friendly(error));
+    if(!S.current)await startSession(data.user.id);
+    toast("Password updated");go("overview")},
+  teamlogin:()=>signInAs(val("t-email"),$("#t-pass").value,"#tErr",true),
+  login:()=>signInAs(val("l-email"),$("#l-pass").value,"#lErr",false),
+  register:async()=>{const E=m=>{$("#rErr").textContent=m};const name=val("r-name"),email=val("r-email"),pass=$("#r-pass").value;
+    if(!name)return E("Enter your name to continue.");if(!/^\S+@\S+\.\S+$/.test(email))return E("Enter a valid email, like you@example.com.");
+    if(pass.length<6)return E("Password needs at least 6 characters.");
+    const m={role:ui.regRole,name,phone:val("r-phone")};
+    if(m.role==="business"){if(!val("r-company"))return E("Enter your business name.");Object.assign(m,{company:val("r-company"),industry:val("r-industry"),handle:val("r-ig"),address:val("r-address")})}
+    if(m.role==="pro"){if(!val("r-handle"))return E("Enter your Instagram handle.");Object.assign(m,{handle:val("r-handle"),followers:val("r-followers"),niche:val("r-niche")||"General",rate:val("r-rate")})}
+    if(m.role==="influencer"){if(!val("r-handle"))return E("Enter your Instagram handle.");Object.assign(m,{handle:val("r-handle"),followers:val("r-followers"),category:val("r-cat"),city:val("r-city"),rate:val("r-rate")})}
+    if(!$("#r-terms").checked)return E("Please accept the terms to continue.");
+    const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:m}});
+    if(error)return E(/already registered|already been registered/i.test(error.message)?"That email is already registered. Log in instead.":friendly(error));
+    if(!data.session){$("#regForm").innerHTML=`<div class="empty"><b>Check your email.</b><br>We sent a confirmation link to ${esc(email)}. Open it, then log in.</div>`;return}
+    await startSession(data.user.id);toast("Account created");go("overview")},
+  newreq:async()=>{const E=m=>{$("#qErr").textContent=m};const title=val("q-title"),budget=+val("q-budget");
+    const plats=$$('input[name="plat"]:checked').map(x=>x.value),svcs=$$('input[name="svc"]:checked').map(x=>x.value);
+    if(!title)return E("Give the campaign a name.");if(!plats.length)return E("Pick at least one platform.");if(!svcs.length)return E("Pick at least one service.");if(!budget||budget<1000)return E("Enter a budget of ₹1,000 or more.");
+    let row;const ok=await run(async()=>{row=await q(sb.from("campaigns").insert({business_id:S.current,title,goal:val("q-goal")||null,audience:val("q-aud")||null,package:$('input[name="pkg"]:checked').value,platforms:plats,services:svcs,budget,deadline:val("q-deadline")||null,notes:val("q-notes")||null}).select("ref").single())},"Request submitted. Our team will assign a manager soon.");
+    if(ok&&row)go("c-"+row.ref)},
+  changes:f=>{const id=f.dataset.arg,t=val("fb-"+id);if(!t){$("#fb-"+id).focus();return toast("Write what should change first")}const d=S.drafts.find(x=>x.id===id);ui.changesFor=null;
+    return run(()=>q(sb.from("drafts").update({status:"Changes",feedback:t}).eq("id",d.dbid)),"Feedback sent to "+(user(d.pro)?.name||"the manager"))},
+  draft:f=>{const r=req(f.dataset.arg),cap=val("d-cap");if(!cap){$("#dErr").textContent="Write a caption before sending.";return}
+    const row={campaign_id:r.dbid,manager_id:S.current,type:val("d-type"),platform:val("d-plat"),caption:cap,hashtags:val("d-tags")||null,post_date:val("d-date")||iso(3)};ui.draftFor=null;
+    return run(()=>q(sb.from("drafts").insert(row)),"Draft sent for approval")},
+  review:f=>{const r=req(f.dataset.arg);return run(()=>q(sb.from("reviews").insert({campaign_id:r.dbid,manager_id:r.pro,business_id:S.current,stars:ui.stars,body:val("rv-text")||"Great work!"})),"Thanks for the review!")},
+  social:f=>{const k=f.dataset.arg,h=val("sc-handle");if(!h){$("#scErr").textContent="Enter your "+k+" handle or page name.";return}ui.connectFor=null;
+    return run(()=>q(sb.from("social_accounts").upsert({business_id:S.current,platform:k,connected:true,handle:h,followers:+val("sc-followers")||0,growth:0})),k+" added")},
+  post:()=>{const cap=val("p-cap");if(!cap){$("#pErr").textContent="Write a caption before scheduling.";return}const d=val("p-date")||iso(1),tm=val("p-time")||"18:00";
+    return run(()=>q(sb.from("posts").insert({business_id:S.current,platform:val("p-plat"),type:val("p-type"),caption:cap,hashtags:val("p-tags")||null,post_date:d,post_time:tm})),"Scheduled for "+fdate(d)+", "+tm)},
+  book:async()=>{const u=me(),i=user(ui.bookFor),E=m=>{$("#bErr").textContent=m};const rid=val("b-req"),r=rid?req(rid):null;
+    if(u.role!=="business"&&!r)return E("Pick the campaign this shoot is for.");
+    const biz=u.role==="business"?u.id:r.biz,loc=val("b-loc")||user(biz)?.address||"",date=val("b-date"),time=val("b-time");
+    if(!date||date<iso(0))return E("Pick a shoot date from today onwards.");if(!time)return E("Pick a time for the shoot.");if(!loc)return E("Add the shoot location so the influencer knows where to come.");
+    const row={influencer_id:i.id,business_id:biz,campaign_id:r?r.dbid:null,booked_by:u.id,shoot_date:date,shoot_time:time,location:loc,deliverable:val("b-del"),fee:+val("b-fee")||i.rate||0,brief:val("b-brief")||null};
+    ui.bookFor=null;ui.bookReq=null;
+    return run(()=>q(sb.from("bookings").insert(row)),i.name.split(" ")[0]+" has been notified")},
+  upload:async f=>{const b=bk(f.dataset.arg),link=val("up-link"),file=$("#up-file")?.files?.[0],E=m=>{$("#upErr").textContent=m};
+    if(!link&&!file)return E("Paste a link to your post, or attach the video.");
+    if(file&&file.size>50*1024*1024)return E("That file is over 50 MB. Upload it to Instagram or Google Drive and paste the link instead.");
+    E(file?"Uploading… please keep this page open.":"");
+    let path=null;
+    if(file){path=`bookings/${b.dbid}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g,"_")}`;
+      const {error}=await sb.storage.from("uploads").upload(path,file,{contentType:file.type||"application/octet-stream"});
+      if(error)return E(friendly(error))}
+    ui.uploadFor=null;
+    return run(()=>q(sb.from("bookings").update({status:"Uploaded",upload_link:link||null,upload_path:path||b.path||null,caption:val("up-cap")||null,feedback:null}).eq("id",b.dbid)),"Uploaded. The brand will review it.")},
+  reshoot:f=>{const b=bk(f.dataset.arg),t=val("rs-fb");if(!t){$("#rs-fb").focus();return toast("Write what should change first")}ui.reshootFor=null;
+    return run(()=>q(sb.from("bookings").update({status:"Reshoot",feedback:t}).eq("id",b.dbid)),"Feedback sent to "+(user(b.inf)?.name||"the influencer"))},
+  research:f=>{const r=req(f.dataset.arg);return run(()=>q(sb.from("campaigns").update({research:{audience:val("rs-a"),competitors:val("rs-c"),hashtags:val("rs-h")}}).eq("id",r.dbid)),"Research brief saved")},
+  brandkit:()=>run(()=>q(sb.from("brand_kits").upsert({business_id:S.current,tone:val("bk-tone"),colors:[0,1,2].map(i=>$("#bk-c"+i).value),hashtags:val("bk-tags"),audience:val("bk-aud"),dos:val("bk-dos"),donts:val("bk-donts"),updated_at:new Date().toISOString()})),"Brand kit saved"),
+  msg:async()=>{const t=val("msg-in");if(!t)return;const r=req(ui.thread);await run(()=>q(sb.from("messages").insert({campaign_id:r.dbid,sender_id:S.current,body:t})));$("#msg-in")?.focus()},
+  settings:async()=>{const u=me(),ch={name:val("s-name")||u.name,phone:val("s-phone")||null};
+    if(u.role==="business")Object.assign(ch,{company:val("s-company")||u.company,handle:val("s-handle")||null,address:val("s-address")||null});
+    if(u.role==="pro")Object.assign(ch,{handle:val("s-handle"),followers:val("s-followers"),rate:+val("s-rate")||null,niche:val("s-niche"),bio:val("s-bio")});
+    if(u.role==="influencer")Object.assign(ch,{handle:val("s-handle"),followers:val("s-followers"),rate:+val("s-rate")||null,category:val("s-cat"),city:val("s-city"),bio:val("s-bio")});
+    const ok=await run(async()=>{await q(sb.from("profiles").update(ch).eq("id",u.id));profile=await q(sb.from("profiles").select("*").eq("id",u.id).single())},"Changes saved");return ok},
+  gen:()=>{const brand=val("g-brand")||"Your brand",topic=val("g-topic")||"our latest offer",tone=val("g-tone"),plat=val("g-plat"),city=(val("g-city")||"").replace(/\s+/g,"");
+    const T=TONES[tone]||TONES["Warm & friendly"],tag="#"+brand.replace(/[^A-Za-z0-9]/g,""),words=topic.split(/\s+/).filter(w=>w.length>3&&/^[A-Za-z]+$/.test(w)).slice(0,2).map(w=>"#"+w[0].toUpperCase()+w.slice(1).toLowerCase());
+    const tags=[tag,...words,city?`#${city}`:"",city?`#${city}Diaries`:"",plat==="LinkedIn"?"#SmallBusiness":"#ExplorePage"].filter(Boolean).join(" ");
+    const short=plat==="X (Twitter)";
+    ui.gen={brand,topic,tone,plat,city:val("g-city"),out:[0,1,2].map(i=>short?`${T.open[i]} ${topic} at ${brand}. ${T.cta[i]}\n${tag}`:`${T.open[i]}\n\n${topic} at ${brand}${city?`, ${val("g-city")}`:""}. ${T.cta[i]}\n\n${tags}`)};render()}
+};
+
+/* ---- event delegation ---- */
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-act]");
+  if(!t){if(!e.target.closest(".pop")&&!e.target.closest(".search")&&(ui.showNotif||ui.showMenu||ui.search)){ui.showNotif=ui.showMenu=false;if(!e.target.closest(".search"))ui.search="";renderTop()}return}
+  const fn=A[t.dataset.act];if(fn){e.preventDefault();e.stopPropagation();fn(t.dataset.arg,t,e)}
+});
+document.addEventListener("submit",async e=>{const f=e.target.closest("[data-form]");if(!f)return;e.preventDefault();
+  if(f.dataset.busy)return;f.dataset.busy="1";const btns=[...f.querySelectorAll("button[type=submit]")];btns.forEach(b=>b.disabled=true);
+  try{await F[f.dataset.form]?.(f)}catch(err){console.error(err);toast(friendly(err))}finally{delete f.dataset.busy;btns.forEach(b=>{if(b.isConnected)b.disabled=false})}});
+document.addEventListener("change",e=>{const t=e.target.closest("[data-change]");if(t)C[t.dataset.change]?.(t)});
+let inputT;
+document.addEventListener("input",e=>{const t=e.target.closest("[data-input]");if(!t)return;I[t.dataset.input](t);clearTimeout(inputT);inputT=setTimeout(()=>{const id=t.id,pos=t.selectionStart;render();const n=document.getElementById(id);if(n){n.focus();n.setSelectionRange(pos,pos)}},250)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&(ui.showNotif||ui.showMenu||ui.search)){ui.showNotif=ui.showMenu=false;ui.search="";renderTop()}});
+
+/* ---- start ---- */
+async function boot(){
+  $("#app").innerHTML=`<div class="wrap"><div class="empty" style="margin:60px auto;max-width:420px">Loading BrandBay…</div></div>`;
+  sb.auth.onAuthStateChange(ev=>{if(ev==="PASSWORD_RECOVERY")go("reset");else if(ev==="SIGNED_OUT"&&S.current){stopLive();S=blank();profile=null;render()}});
+  try{const {data:{session}}=await sb.auth.getSession();
+    if(session){try{await startSession(session.user.id)}catch(e){console.error(e);await sb.auth.signOut();S=blank();profile=null}}
+  }catch(e){console.error(e);toast(friendly(e))}
+  booted=true;
+  if(RECOVERY){route="reset";try{history.replaceState(null,"",location.pathname+"#reset")}catch(e){}}
+  else if(/access_token|error_description/.test(route)){route=S.current?"overview":"login";try{history.replaceState(null,"",location.pathname+"#"+route)}catch(e){}}
+  render();
+}
+boot();
+</script>
+</body>
+</html>
