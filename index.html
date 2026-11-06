@@ -209,6 +209,8 @@ tr:last-child td{border-bottom:0}
 .draft{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px}
 .thumb{aspect-ratio:1;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;max-width:100%}
 .th-Post{background:linear-gradient(135deg,var(--accent),#F29E6B)} .th-Reel{background:linear-gradient(135deg,var(--violet),var(--accent))} .th-Story{background:linear-gradient(135deg,#2C9C8A,var(--violet))}
+.th-Carousel,.th-Update,.th-Offer,.th-Event,.th-Ad,.th-Thread,.th-Broadcast{background:linear-gradient(135deg,var(--accent),#F29E6B)} .th-Video,.th-Short{background:linear-gradient(135deg,var(--violet),var(--accent))} .th-Status{background:linear-gradient(135deg,#2C9C8A,var(--violet))}
+.ev-Carousel,.ev-Update,.ev-Offer,.ev-Event,.ev-Ad,.ev-Thread,.ev-Broadcast{background:var(--accent-soft);color:var(--accent)} .ev-Video,.ev-Short{background:var(--violet-soft);color:var(--violet)} .ev-Status{background:var(--info-soft);color:var(--info)}
 .caption{white-space:pre-wrap;font-size:14px}
 .feedback{font-size:13px;background:var(--bad-soft);color:var(--bad);border-radius:8px;padding:8px 10px}
 
@@ -816,7 +818,7 @@ function detailView(r){
 
   <div class="cols"><div style="display:grid;gap:20px;min-width:0">
    <div class="card"><div class="chead"><h3>Content drafts (${ds.length})</h3>${u.role==="pro"&&r.pro===u.id&&ui.draftFor!==r.id?`<button class="btn small primary" data-act="newdraft" data-arg="${r.id}" type="button">Submit new draft</button>`:""}</div>
-    ${ui.draftFor===r.id?`<form class="item" data-form="draft" data-arg="${r.id}" style="margin-bottom:12px" novalidate><div class="three"><div class="field"><label for="d-type">Type</label><select id="d-type"><option>Post</option><option>Reel</option><option>Story</option></select></div><div class="field"><label for="d-plat">Platform</label><select id="d-plat">${r.platforms.map(x=>`<option>${x}</option>`).join("")}</select></div><div class="field"><label for="d-date">Post date</label><input id="d-date" type="date" value="${iso(3)}"></div></div>
+    ${ui.draftFor===r.id?`<form class="item" data-form="draft" data-arg="${r.id}" style="margin-bottom:12px" novalidate><div class="three"><div class="field"><label for="d-type">Type</label><select id="d-type">${typeOptions(r.platforms[0])}</select></div><div class="field"><label for="d-plat">Platform</label><select id="d-plat" data-change="dtypes">${r.platforms.map(x=>`<option>${x}</option>`).join("")}</select></div><div class="field"><label for="d-date">Post date</label><input id="d-date" type="date" value="${iso(3)}"></div></div>
      <div class="field"><label for="d-cap">Caption</label><textarea id="d-cap" placeholder="Write the caption…"></textarea></div><div class="field"><label for="d-tags">Hashtags</label><input id="d-tags" value="${esc(kit?.hashtags||"")}"></div><div class="err" id="dErr"></div><div class="actions"><button class="btn primary small" type="submit">Send for approval</button><button class="btn small ghost" data-act="canceldraft" type="button">Cancel</button></div></form>`:""}
     <div class="list">${ds.map(d=>draftItem(d,u.role==="business"&&r.biz===u.id?approveActions(d):u.role==="pro"&&d.status==="Changes"?`<div class="actions"><button class="btn small" data-act="resubmit" data-arg="${d.id}" type="button">Mark as fixed and resubmit</button></div>`:"")).join("")||`<div class="empty">${r.pro?"No drafts yet. The pro will submit them here.":"Drafts appear once a pro is assigned."}</div>`}</div></div>
    ${r.stage==="Live"&&u.role==="business"&&r.pro?(rev?`<div class="card"><h3>Your review</h3><p><span class="stars">${starStr(rev.stars)}</span> ${esc(rev.text)}</p></div>`:`<form class="card" data-form="review" data-arg="${r.id}"><h3>Rate ${esc(p.name)}</h3><div class="starpick" role="radiogroup" aria-label="Rating">${[1,2,3,4,5].map(n=>`<button type="button" class="${n<=ui.stars?"on":""}" data-act="star" data-arg="${n}" aria-label="${n} stars">★</button>`).join("")}</div><div class="field" style="margin-top:10px"><label for="rv-text">How was it?</label><textarea id="rv-text" placeholder="Share what went well"></textarea></div><button class="btn primary" type="submit">Submit review</button></form>`):""}
@@ -855,7 +857,7 @@ V.business_planner=u=>{const so=socialsOf(u.id),on=Object.keys(so).filter(k=>so[
   return head("Post planner","Create and schedule your own posts")+`<div class="cols"><div style="display:grid;gap:20px;min-width:0"><div class="card"><h3>Scheduled (${up.length})</h3><div class="list">${up.map(row).join("")||`<div class="empty">Nothing scheduled. Create a post with the form.</div>`}</div></div>
   <div class="card"><h3>Published</h3><div class="list">${past.slice(0,5).map(row).join("")||`<div class="empty">No published posts yet.</div>`}</div></div></div>
   ${on.length?`<form class="card" data-form="post" novalidate><h3>New post</h3>
-   <div class="two"><div class="field"><label for="p-plat">Platform</label><select id="p-plat">${on.map(k=>`<option>${k}</option>`).join("")}</select></div><div class="field"><label for="p-type">Type</label><select id="p-type"><option>Post</option><option>Reel</option><option>Story</option></select></div></div>
+   <div class="two"><div class="field"><label for="p-plat">Platform</label><select id="p-plat" data-change="ptypes">${on.map(k=>`<option>${k}</option>`).join("")}</select></div><div class="field"><label for="p-type">Type</label><select id="p-type">${typeOptions(on[0])}</select></div></div>
    <div class="two"><div class="field"><label for="p-date">Date</label><input id="p-date" type="date" value="${iso(1)}" min="${iso(0)}"></div><div class="field"><label for="p-time">Time</label><input id="p-time" type="time" value="18:00"></div></div>
    <div class="field"><label for="p-cap">Caption</label><textarea id="p-cap" placeholder="What do you want to say?"></textarea></div>
    <div class="field"><label for="p-tags">Hashtags</label><input id="p-tags" value="${esc(S.brandkits[u.id]?.hashtags||"")}"></div>
@@ -1057,8 +1059,14 @@ function doAssign(rid,pid){const r=req(rid);const ch={manager_id:pid||null};if(p
 function copyText(t,msg){try{navigator.clipboard.writeText(t).then(()=>toast(msg),()=>fallbackCopy(t,msg))}catch(e){fallbackCopy(t,msg)}}
 function fallbackCopy(t,msg){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast(msg)}catch(e){toast("Select the text to copy it")}ta.remove()}
 
+/* Each platform offers only the post types it really has. */
+const PLATFORM_TYPES={"Instagram":["Post","Carousel","Reel","Story"],"Facebook":["Post","Reel","Story"],"YouTube":["Video","Short"],"LinkedIn":["Post","Video"],"X (Twitter)":["Post","Thread"],"Google Business":["Update","Offer","Event"],"Google Ads":["Ad"],"WhatsApp":["Status","Broadcast"]};
+const typeOptions=p=>(PLATFORM_TYPES[p]||["Post"]).map(t=>`<option>${t}</option>`).join("");
+
 /* ---- change / input handlers ---- */
 const C={
+  ptypes:t=>{$("#p-type").innerHTML=typeOptions(t.value)},
+  dtypes:t=>{$("#d-type").innerHTML=typeOptions(t.value)},
   regrole:t=>{ui.regRole=t.value;$("#roleFields").innerHTML=roleFields(ui.regRole)},
   pkg:t=>{$("#pkgDesc").textContent=PACKAGES[t.value].desc;if(PACKAGES[t.value].price)$("#q-budget").value=PACKAGES[t.value].price},
   mkplat:t=>{ui.mkPlat=t.value;render()},
