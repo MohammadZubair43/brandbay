@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="BrandBay: one portal for a brand's marketing, social media managers and influencer shoots.">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#D63A6E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BrandBay">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23D63A6E'/%3E%3Ctext x='16' y='22' font-size='16' font-family='Arial' font-weight='700' fill='white' text-anchor='middle'%3EB%3C/text%3E%3C/svg%3E">
 <title>BrandBay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -280,6 +285,7 @@ tr:last-child td{border-bottom:0}
 .compose .attach{padding:8px 12px;font-size:16px;flex:none}
 .compose .fname{align-self:center;font-size:12px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .compose .fname:empty{display:none}
+.pushcard{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;border-color:var(--accent)}
 .legal{max-width:720px;margin:32px auto 56px;line-height:1.65}
 .legal h1{font-size:34px;margin-bottom:6px}
 .legal h2{font-size:19px;margin:26px 0 8px}
@@ -408,9 +414,9 @@ function stopLive(){if(live){sb.removeChannel(live);live=null}}
 
 async function startSession(uid){
   profile=await q(sb.from("profiles").select("*").eq("id",uid).single());
-  S.current=uid;await loadAll();startLive();
+  S.current=uid;await loadAll();startLive();refreshPush(true);
 }
-async function endSession(){stopLive();await sb.auth.signOut();profile=null;S=blank()}
+async function endSession(){stopLive();await disablePush(true);await sb.auth.signOut();ui.push=undefined;profile=null;S=blank()}
 
 /* ================= HELPERS ================= */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -548,7 +554,7 @@ function render(){
     const nav=NAV[u.role];
     app.innerHTML=`<div class="wrap shell"><nav class="side" aria-label="Sections"><div class="me"><span class="av" style="cursor:default">${initials(u.name)}</span><div><b>${esc(u.company||u.name)}</b><span class="tag ${roleTag(u.role)}">${ROLES[u.role]}</span></div></div>
       ${nav.map(([k,l])=>{const c=navCount(k);return `<button class="nav" data-act="go" data-arg="${k}" type="button" ${route===k?'aria-current="page"':""}><span>${l}</span>${c?`<span class="cnt">${c}</span>`:""}</button>`}).join("")}</nav>
-      <div class="main">${body}</div></div>`;
+      <div class="main">${route==="overview"?pushBanner():""}${body}</div></div>`;
   }
   afterRender();
 }
@@ -803,7 +809,7 @@ V.settings=u=>{const revs=S.reviews.filter(r=>r.pro===u.id);
   <div class="two"><div class="field"><label for="s-cat">Category</label><select id="s-cat">${INFCATS.map(c=>`<option ${c===u.category?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label for="s-city">City</label><select id="s-city">${CITIES.map(c=>`<option ${c===u.city?"selected":""}>${c}</option>`).join("")}</select></div></div>
   <div class="field"><label for="s-bio">Bio</label><textarea id="s-bio">${esc(u.bio||"")}</textarea></div>`:""}
   <div class="field"><span class="flabel">Email me about</span><div class="checks"><label><input type="checkbox" checked> New messages</label><label><input type="checkbox" checked> Campaign updates</label><label><input type="checkbox"> Weekly report</label></div></div>
-  <div class="actions"><button class="btn primary" type="submit">Save changes</button></div></form>
+  <div class="actions"><button class="btn primary" type="submit">Save changes</button></div></form>${pushCard()}
   ${u.role==="pro"?`<div class="card"><h3>Reviews</h3><p style="margin-bottom:12px"><span class="stars" style="font-size:20px">${starStr(rating(u.id))}</span> <b>${rating(u.id).toFixed(1)}</b> <span class="muted">from ${revs.length} brands</span></p><div class="list">${revs.map(r=>`<div class="item"><div class="hd"><b>${esc(bizName(r.biz))}</b><span class="stars">${starStr(r.stars)}</span></div><p style="font-size:14px">${esc(r.text)}</p><small class="muted">${fdate(r.at)}</small></div>`).join("")||`<div class="empty">No reviews yet.</div>`}</div></div>`
   :`<div class="card"><h3>Your account</h3><div class="kv"><div><small>Role</small><b>${ROLES[u.role]}</b></div><div><small>Status</small><span class="status s-${u.status}" style="width:max-content">${u.status}</span></div>${u.role==="business"?`<div><small>Industry</small><b>${esc(u.industry)}</b></div><div><small>Campaigns</small><b>${myReqs().length}</b></div>`:u.role==="influencer"?`<div><small>Shoots done</small><b>${myBookings().filter(b=>b.status==="Approved").length}</b></div>`:`<div><small>Department</small><b>${esc(u.dept)}</b></div>`}</div></div>`}</div>`};
 
@@ -1010,6 +1016,52 @@ function privacyView(){return legalPage("Privacy Policy",
   ["Contact",`<p>Privacy questions: ${ph("support email")}.</p>`]
 ])}
 
+/* ================= POP-UP NOTIFICATIONS (Web Push) ================= */
+const VAPID_PUBLIC_KEY="BMbsvBEirTCtiEKKIZ8e8Jd-gASB0Ff3R8TblJwxbzSrzZRnjf48mkt3baTJTBy-UmjSq4_vXf5TOJIAZrMjgpY";
+const pushConfigured=()=>!VAPID_PUBLIC_KEY.startsWith("__");
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const isStandalone=()=>{try{return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){return false}};
+const pushSupported=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&(location.protocol==="https:"||location.hostname==="localhost");
+function b64ToU8(s){const p="=".repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
+async function swReg(){return (await navigator.serviceWorker.getRegistration("/"))||navigator.serviceWorker.register("/sw.js",{scope:"/"})}
+/* on | off | blocked | ios-homescreen | unsupported | unconfigured */
+async function pushState(){
+  if(!pushConfigured())return "unconfigured";
+  if(!pushSupported())return isIOS&&!isStandalone()?"ios-homescreen":"unsupported";
+  if(Notification.permission==="denied")return "blocked";
+  try{const r=await navigator.serviceWorker.getRegistration("/");const sub=r&&await r.pushManager.getSubscription();return sub&&Notification.permission==="granted"?"on":"off"}catch(e){return "off"}
+}
+async function refreshPush(rebind){ui.push=await pushState();if(ui.push==="unconfigured"||ui.push==="unsupported"){render();return}
+  if(rebind&&ui.push==="on"){try{const r=await navigator.serviceWorker.getRegistration("/");const sub=await r.pushManager.getSubscription();await savePushSub(sub)}catch(e){console.error(e)}}
+  render()}
+async function savePushSub(sub){const j=sub.toJSON();await q(sb.rpc("save_push_subscription",{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_user_agent:navigator.userAgent}))}
+async function enablePush(){
+  try{const perm=await Notification.requestPermission();
+    if(perm!=="granted"){toast(perm==="denied"?"Notifications are blocked. Allow them in your browser settings.":"No problem. You can turn alerts on later in Settings.");return refreshPush()}
+    const r=await swReg();await navigator.serviceWorker.ready;
+    const sub=await r.pushManager.getSubscription()||await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(VAPID_PUBLIC_KEY)});
+    await savePushSub(sub);toast("Alerts are on for this device");
+  }catch(e){console.error(e);toast("Couldn't turn on alerts: "+friendly(e))}
+  refreshPush()}
+async function disablePush(keepBrowser){
+  if(!pushConfigured()||!pushSupported())return;
+  try{const r=await navigator.serviceWorker.getRegistration("/");const sub=r&&await r.pushManager.getSubscription();
+    if(sub){await sb.rpc("remove_push_subscription",{p_endpoint:sub.endpoint});if(!keepBrowser)await sub.unsubscribe()}}catch(e){console.error(e)}
+  if(!keepBrowser){toast("Alerts are off for this device");refreshPush()}}
+const pushDismissKey=()=>"brandbay-push-dismissed-"+S.current;
+function pushDismissed(){try{return localStorage.getItem(pushDismissKey())==="1"}catch(e){return false}}
+function pushBanner(){
+  if(pushDismissed())return "";
+  if(ui.push==="off")return `<div class="card pushcard"><div><b>Get BrandBay alerts on this device</b><p class="muted" style="font-size:14px;margin-top:2px">New shoots, approvals and messages pop up even when the site is closed.</p></div><div class="actions"><button class="btn primary small" data-act="pushon" type="button">Turn on alerts</button><button class="btn ghost small" data-act="pushlater" type="button">Not now</button></div></div>`;
+  if(ui.push==="ios-homescreen")return `<div class="card pushcard"><div><b>Get BrandBay alerts on your iPhone</b><p class="muted" style="font-size:14px;margin-top:2px">Tap <b>Share</b>, then <b>Add to Home Screen</b>. Open BrandBay from your home screen and turn on alerts there.</p></div><div class="actions"><button class="btn ghost small" data-act="pushlater" type="button">Got it</button></div></div>`;
+  return "";
+}
+function pushCard(){const st=ui.push||"unsupported";if(st==="unconfigured")return "";
+  const txt={on:"Alerts are <b>on</b> for this device.",off:"Alerts are <b>off</b> for this device.",blocked:"Alerts are <b>blocked</b> by your browser. Allow notifications for this site in your browser settings, then reload the page.","ios-homescreen":"On iPhone, add BrandBay to your home screen first (Share → Add to Home Screen), then open it from there to turn on alerts.",unsupported:"This browser doesn't support pop-up alerts. Try Chrome, Edge or Safari."}[st];
+  return `<div class="card"><h3>Pop-up alerts</h3><p style="font-size:14px">${txt}</p><p class="muted" style="font-size:13px;margin:6px 0 12px">New shoots, approvals, messages and reminders pop up on this device even when BrandBay is closed.</p>
+  ${st==="on"?`<button class="btn small" data-act="pushoff" type="button">Turn off on this device</button>`:st==="off"?`<button class="btn small primary" data-act="pushon" type="button">Turn on alerts</button>`:""}</div>`}
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{const u=e.data&&e.data.go;if(!u)return;try{const h=decodeURIComponent(new URL(u,location.href).hash.slice(1));if(h)go(h)}catch(_){}});
+
 /* ---- files ---- */
 const CHAT_MAX=10*1024*1024, BRAND_MAX=25*1024*1024;
 const fmtSize=b=>b>=1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/1024))+" KB";
@@ -1023,6 +1075,9 @@ function brandFilesInline(biz){const files=S.brandfiles.filter(f=>f.biz===biz);i
   return `<div class="actions" style="font-size:13px"><span class="muted">Brand files:</span>${files.map(f=>`<button class="btn small" data-act="openf" data-arg="brand-files::${esc(f.path)}" type="button">📄 ${esc(f.name)}</button>`).join("")}</div>`}
 
 const A={
+  pushon:()=>enablePush(),
+  pushoff:()=>disablePush(false),
+  pushlater:()=>{try{localStorage.setItem(pushDismissKey(),"1")}catch(e){}render()},
   openf:async a=>{const i=a.indexOf("::"),bucket=a.slice(0,i),path=a.slice(i+2);try{const {data,error}=await sb.storage.from(bucket).createSignedUrl(path,3600);if(error)throw error;window.open(data.signedUrl,"_blank","noopener")}catch(e){toast(friendly(e))}},
   delbrandfile:(a,t)=>{if(!t.dataset.armed){t.dataset.armed=1;t.textContent="Click again to delete";return}const f=S.brandfiles.find(x=>String(x.id)===String(a));
     run(async()=>{await q(sb.from("brand_files").delete().eq("id",f.id));await sb.storage.from("brand-files").remove([f.path])},"File deleted")},
