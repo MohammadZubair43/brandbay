@@ -274,6 +274,12 @@ tr:last-child td{border-bottom:0}
 .teamhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .urlpill{font-family:var(--mono);font-size:12px;background:var(--sunk);border-radius:6px;padding:3px 8px;color:var(--muted)}
 .uplink{color:var(--info);font-weight:600;overflow-wrap:anywhere}
+.filechip{display:flex;gap:8px;align-items:center;max-width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:600;font-size:13px;cursor:pointer;text-align:left;overflow-wrap:anywhere}
+.filechip span{color:var(--muted);font-weight:400;white-space:nowrap}
+.msg.mine .filechip{align-self:flex-end}
+.compose .attach{padding:8px 12px;font-size:16px;flex:none}
+.compose .fname{align-self:center;font-size:12px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compose .fname:empty{display:none}
 .legal{max-width:720px;margin:32px auto 56px;line-height:1.65}
 .legal h1{font-size:34px;margin-bottom:6px}
 .legal h2{font-size:19px;margin:26px 0 8px}
@@ -341,7 +347,7 @@ const SB_KEY="sb_publishable_X6eF6Arf--zYRG3xGmLKAQ_t0d21mdI";
 // A password-reset email link opens the site with "type=recovery" in the address. Note it before Supabase reads and clears it.
 const RECOVERY=/type=recovery/.test(location.hash);
 const sb=window.supabase.createClient(SB_URL,SB_KEY);
-const blank=()=>({users:[],requests:[],drafts:[],messages:[],invoices:[],reviews:[],brandkits:{},socials:{},posts:[],bookings:[],notifs:[],activity:[],current:null});
+const blank=()=>({users:[],requests:[],drafts:[],messages:[],invoices:[],reviews:[],brandkits:{},socials:{},posts:[],bookings:[],notifs:[],activity:[],brandfiles:[],current:null});
 let S=blank(),profile=null,booted=false,live=null;
 const save=()=>{};
 const dOnly=t=>t?String(t).slice(0,10):"";
@@ -356,7 +362,7 @@ function mapProfile(p){return{id:p.id,name:p.name,email:p.email||"",phone:p.phon
 async function loadAll(){
   const uid=S.current;if(!uid){S=blank();return}
   const staff=profile&&profile.role==="employee"&&profile.status==="Active";
-  const [people,camps,drafts,msgs,invs,revs,kits,socs,posts,bks,notifs,acts]=await Promise.all([
+  const [people,camps,drafts,msgs,invs,revs,kits,socs,posts,bks,notifs,acts,bfiles]=await Promise.all([
     q(sb.from(staff?"profiles":"directory").select("*")),
     q(sb.from("campaigns").select("*")),
     q(sb.from("drafts").select("*").order("id")),
@@ -368,7 +374,8 @@ async function loadAll(){
     q(sb.from("posts").select("*").order("id")),
     q(sb.from("bookings").select("*")),
     q(sb.from("notifications").select("*").order("id",{ascending:false}).limit(50)),
-    q(sb.from("activity").select("*").order("id",{ascending:false}).limit(200))
+    q(sb.from("activity").select("*").order("id",{ascending:false}).limit(200)),
+    q(sb.from("brand_files").select("*").order("id",{ascending:false}))
   ]);
   const ref=new Map(camps.map(c=>[c.id,c.ref]));
   const N={...blank(),current:uid};
@@ -376,7 +383,8 @@ async function loadAll(){
   if(profile)N.users.push(mapProfile(profile));
   N.requests=camps.map(c=>({id:c.ref,dbid:c.id,biz:c.business_id,pro:c.manager_id,title:c.title,goal:c.goal||"—",audience:c.audience||"",pkg:c.package,platforms:c.platforms||[],services:c.services||[],budget:c.budget,stage:c.stage,created:dOnly(c.created_at),deadline:c.deadline||dOnly(c.created_at),notes:c.notes||"",research:Object.assign({audience:"",competitors:"",hashtags:""},c.research||{})}));
   N.drafts=drafts.map(d=>({id:"D"+d.id,dbid:d.id,req:ref.get(d.campaign_id),pro:d.manager_id,type:d.type,platform:d.platform,caption:d.caption,hashtags:d.hashtags||"",date:d.post_date,status:d.status,feedback:d.feedback||""}));
-  N.messages=msgs.map(m=>({req:ref.get(m.campaign_id),from:m.sender_id,text:m.body,at:m.created_at}));
+  N.messages=msgs.map(m=>({req:ref.get(m.campaign_id),from:m.sender_id,text:m.body||"",file:m.file_path||"",fname:m.file_name||"",fsize:m.file_size||0,at:m.created_at}));
+  N.brandfiles=bfiles.map(f=>({id:f.id,biz:f.business_id,path:f.path,name:f.name,size:f.size,by:f.uploaded_by,at:f.created_at}));
   N.invoices=invs.map(i=>({id:i.ref,dbid:i.id,req:ref.get(i.campaign_id),biz:i.business_id,amount:i.amount,status:i.status,due:i.due}));
   N.reviews=revs.map(r=>({req:ref.get(r.campaign_id)||"",pro:r.manager_id,biz:r.business_id,stars:r.stars,text:r.body||"",at:dOnly(r.created_at)}));
   kits.forEach(k=>N.brandkits[k.business_id]={tone:k.tone||"Friendly",colors:(k.colors&&k.colors.length?k.colors:["#D63A6E","#17152B","#FFFFFF"]),hashtags:k.hashtags||"",audience:k.audience||"",dos:k.dos||"",donts:k.donts||""});
@@ -680,13 +688,13 @@ V.business_billing=u=>{const inv=S.invoices.filter(i=>i.biz===u.id).sort((a,b)=>
   </tbody></table></div><p class="muted" style="font-size:13px;margin-top:12px">Online payment is coming in the next update. For now, pay the BrandBay team directly and they will mark the invoice as paid here.</p></div>`};
 
 V.business_brandkit=u=>{const k=S.brandkits[u.id]||{tone:"Friendly",colors:["#D63A6E","#17152B","#FFFFFF"],hashtags:"",audience:"",dos:"",donts:""};
-  return head("Brand kit","Shared with every pro on your campaigns")+`<form class="card" data-form="brandkit" novalidate>
+  return head("Brand kit","Shared with your managers and booked influencers")+`<form class="card" data-form="brandkit" novalidate>
   <div class="two"><div class="field"><label for="bk-tone">Brand voice</label><select id="bk-tone">${["Warm & friendly","Energetic & motivating","Premium & elegant","Fun & quirky","Professional & trusted","Friendly"].map(t=>`<option ${t===k.tone?"selected":""}>${t}</option>`).join("")}</select></div>
   <div class="field"><span class="flabel">Brand colors</span><div class="swatches">${k.colors.map((c,i)=>`<input type="color" id="bk-c${i}" value="${c}" aria-label="Brand color ${i+1}">`).join("")}</div></div></div>
   <div class="field"><label for="bk-tags">Brand hashtags</label><input id="bk-tags" value="${esc(k.hashtags)}" placeholder="#YourBrand #YourCity"></div>
   <div class="field"><label for="bk-aud">Target audience</label><input id="bk-aud" value="${esc(k.audience)}"></div>
   <div class="two"><div class="field"><label for="bk-dos">Do's</label><textarea id="bk-dos">${esc(k.dos)}</textarea></div><div class="field"><label for="bk-donts">Don'ts</label><textarea id="bk-donts">${esc(k.donts)}</textarea></div></div>
-  <button class="btn primary" type="submit">Save brand kit</button></form>`};
+  <button class="btn primary" type="submit">Save brand kit</button></form>`+brandFilesCard(u.id,true)};
 
 /* ---- pro ---- */
 V.pro_overview=u=>{const mine=myReqs(),open=S.requests.filter(r=>!r.pro),fix=S.drafts.filter(d=>d.pro===u.id&&d.status==="Changes"),up=S.drafts.filter(d=>d.pro===u.id&&d.status==="Approved"&&d.date>=iso(0)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,4);
@@ -779,10 +787,10 @@ V.calendar=u=>{
 V.messages=u=>{const rs=myReqs().filter(r=>u.role==="employee"||r.pro||r.biz===u.id);
   if(!ui.thread||!rs.find(r=>r.id===ui.thread))ui.thread=rs[0]?.id;
   const r=req(ui.thread),ms=S.messages.filter(m=>m.req===ui.thread);
-  return head("Messages","One thread per campaign")+(rs.length?`<div class="chat"><div class="threads">${rs.map(x=>{const last=S.messages.filter(m=>m.req===x.id).slice(-1)[0];return `<button class="thread" data-act="thread" data-arg="${x.id}" aria-current="${x.id===ui.thread}" type="button"><b style="font-size:14px">${esc(x.title)}</b><small>${last?esc(user(last.from)?.name.split(" ")[0]+": "+last.text):"No messages yet"}</small></button>`}).join("")}</div>
+  return head("Messages","One thread per campaign")+(rs.length?`<div class="chat"><div class="threads">${rs.map(x=>{const last=S.messages.filter(m=>m.req===x.id).slice(-1)[0];return `<button class="thread" data-act="thread" data-arg="${x.id}" aria-current="${x.id===ui.thread}" type="button"><b style="font-size:14px">${esc(x.title)}</b><small>${last?esc(user(last.from)?.name.split(" ")[0]+": "+(last.text||"📎 "+last.fname)):"No messages yet"}</small></button>`}).join("")}</div>
   <div class="convo"><div class="ch"><b>${esc(r.title)}</b><div class="meta"><span>${esc(bizName(r.biz))}</span><span>Manager: ${esc(user(r.pro)?.name||"not assigned")}</span><span>Team: BrandBay</span></div></div>
-  <div class="msgs">${ms.map(m=>{const f=user(m.from);return `<div class="msg ${m.from===u.id?"mine":""}"><small>${esc(f?.name||"")} · ${ROLES[f?.role]||""}</small><div class="bub">${esc(m.text)}</div><small>${ago(m.at)}</small></div>`}).join("")||`<div class="empty">Say hello to start the conversation.</div>`}</div>
-  <form class="compose" data-form="msg"><input id="msg-in" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn primary" type="submit">Send</button></form></div></div>`:`<div class="card"><div class="empty">Messages open once you have a campaign.</div></div>`)};
+  <div class="msgs">${ms.map(m=>{const f=user(m.from);return `<div class="msg ${m.from===u.id?"mine":""}"><small>${esc(f?.name||"")} · ${ROLES[f?.role]||""}</small>${m.text?`<div class="bub">${esc(m.text)}</div>`:""}${m.file?`<button class="filechip" data-act="openf" data-arg="chat-files::${esc(m.file)}" type="button">📎 ${esc(m.fname)} <span>${fmtSize(m.fsize)}</span></button>`:""}<small>${ago(m.at)}</small></div>`}).join("")||`<div class="empty">Say hello to start the conversation.</div>`}</div>
+  <form class="compose" data-form="msg"><label class="btn attach" for="msg-file" title="Attach a file (up to 10 MB)" aria-label="Attach a file">📎</label><input type="file" id="msg-file" hidden data-change="msgfile"><span id="msg-fname" class="fname"></span><input id="msg-in" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn primary" type="submit">Send</button></form></div></div>`:`<div class="card"><div class="empty">Messages open once you have a campaign.</div></div>`)};
 
 V.settings=u=>{const revs=S.reviews.filter(r=>r.pro===u.id);
   return head(u.role==="pro"?"Profile & reviews":"Settings")+`<div class="cols"><form class="card" data-form="settings" novalidate><div class="row" style="margin-bottom:16px"><span class="av lg">${initials(u.name)}</span><div><b style="font-size:17px">${esc(u.name)}</b><div class="muted">${ROLES[u.role]} · joined ${fdate(u.joined)}</div></div></div>
@@ -827,7 +835,7 @@ function detailView(r){
    <div class="card"><div class="chead"><h3>Research brief</h3>${u.role==="employee"?`<span class="tag t-emp">You can edit</span>`:""}</div>
     ${u.role==="employee"?`<form data-form="research" data-arg="${r.id}"><div class="field"><label for="rs-a">Audience insights</label><textarea id="rs-a">${esc(r.research.audience)}</textarea></div><div class="field"><label for="rs-c">Competitors</label><textarea id="rs-c">${esc(r.research.competitors)}</textarea></div><div class="field"><label for="rs-h">Suggested hashtags</label><input id="rs-h" value="${esc(r.research.hashtags)}"></div><button class="btn small primary" type="submit">Save brief</button></form>`
     :r.research.audience||r.research.competitors?`<div style="display:grid;gap:10px;font-size:14px"><div><div class="label">Audience</div>${esc(r.research.audience||"—")}</div><div><div class="label">Competitors</div>${esc(r.research.competitors||"—")}</div><div><div class="label">Hashtags</div><span style="color:var(--info)">${esc(r.research.hashtags||"—")}</span></div></div>`:`<div class="empty">Our research team is preparing this.</div>`}</div>
-   ${kit?`<div class="card"><h3>Brand kit</h3><div style="display:grid;gap:8px;font-size:14px"><div class="row">${kit.colors.map(c=>`<span style="width:28px;height:28px;border-radius:8px;background:${esc(c)};border:1px solid var(--line)"></span>`).join("")}<b style="margin-left:6px">${esc(kit.tone)}</b></div><div><span class="label">Do</span> ${esc(kit.dos)}</div><div><span class="label">Don't</span> ${esc(kit.donts)}</div></div></div>`:""}
+   ${kit?`<div class="card"><h3>Brand kit</h3><div style="display:grid;gap:8px;font-size:14px"><div class="row">${kit.colors.map(c=>`<span style="width:28px;height:28px;border-radius:8px;background:${esc(c)};border:1px solid var(--line)"></span>`).join("")}<b style="margin-left:6px">${esc(kit.tone)}</b></div><div><span class="label">Do</span> ${esc(kit.dos)}</div><div><span class="label">Don't</span> ${esc(kit.donts)}</div></div></div>`:""}${brandFilesCard(r.biz,false)}
    <div class="card"><div class="chead"><h3>Latest messages</h3><button class="btn small" data-act="openthread" data-arg="${r.id}" type="button">Open chat</button></div><div class="list">${ms.map(m=>`<div style="font-size:14px"><b>${esc(user(m.from)?.name.split(" ")[0])}:</b> ${esc(m.text)} <span class="muted" style="font-size:12px">${ago(m.at)}</span></div>`).join("")||`<div class="empty">No messages yet.</div>`}</div></div>
    <div class="card"><div class="chead"><h3>Influencer shoots</h3>${u.role!=="influencer"?`<button class="btn small" data-act="bookfromreq" data-arg="${r.id}" type="button">Book influencer</button>`:""}</div><div class="list">${S.bookings.filter(b=>b.req===r.id).map(b=>`<div style="font-size:14px"><b>${esc(user(b.inf).name)}</b> · ${b.deliverable}<br><span class="muted">${fdate(b.date)}, ${b.time}</span> <span class="status s-${b.status}">${b.status}</span></div>`).join("")||`<div class="empty">No influencer booked for this campaign yet.</div>`}</div></div>
    <div class="card"><h3>Timeline</h3>${feed(S.activity.filter(a=>a.req===r.id).slice(0,8))}</div>
@@ -879,7 +887,7 @@ function bookingItem(b){const u=me(),i=user(b.inf),mine=u.role!=="influencer";
   }
   return `<div class="item"><div class="hd"><div class="row" style="align-items:flex-start"><span class="av" style="cursor:default;background:linear-gradient(135deg,var(--ok),var(--violet))">${initials(u.role==="influencer"?bizName(b.biz):i.name)}</span><div><b>${b.deliverable} · ${esc(u.role==="influencer"?bizName(b.biz):i.name)}</b><div class="meta"><span class="mono">${b.id}</span>${u.role==="influencer"?"":`<span>${esc(i.handle)}</span><span>for ${esc(bizName(b.biz))}</span>`}${b.req?`<span>${esc(req(b.req)?.title||"")}</span>`:""}</div></div></div><span class="status s-${b.status}">${b.status==="Reshoot"?"Changes asked":b.status}</span></div>
   <div class="meta" style="color:var(--ink);font-size:14px"><span>📅 <b>${new Date(b.date).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}, ${b.time}</b></span><span>📍 ${esc(b.location)}</span><span class="num">💰 ${rupee(b.fee)}</span></div>
-  ${b.brief?`<div class="meta">Brief: ${esc(b.brief)}</div>`:""}
+  ${b.brief?`<div class="meta">Brief: ${esc(b.brief)}</div>`:""}${u.role==="influencer"?brandFilesInline(b.biz):""}
   ${b.link||b.path?`<div style="font-size:14px;display:grid;gap:4px">Uploaded:${b.link?` <a class="uplink" href="${esc(b.link)}" target="_blank" rel="noopener">${esc(b.link)}</a>`:""}${b.path?`<div><button class="btn small" data-act="openfile" data-arg="${esc(b.path)}" type="button">▶ Open video</button></div>`:""}${b.caption?`<div class="muted">“${esc(b.caption)}”</div>`:""}</div>`:""}
   ${b.feedback&&b.status==="Reshoot"?`<div class="feedback">Feedback: ${esc(b.feedback)}</div>`:""}${act}</div>`}
 
@@ -1002,7 +1010,22 @@ function privacyView(){return legalPage("Privacy Policy",
   ["Contact",`<p>Privacy questions: ${ph("support email")}.</p>`]
 ])}
 
+/* ---- files ---- */
+const CHAT_MAX=10*1024*1024, BRAND_MAX=25*1024*1024;
+const fmtSize=b=>b>=1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/1024))+" KB";
+const safeName=n=>n.replace(/[^\w.\-]+/g,"_").slice(-120);
+function brandFilesCard(biz,own){const files=S.brandfiles.filter(f=>f.biz===biz),staff=me()?.role==="employee";
+  if(!own&&!files.length)return "";
+  return `<div class="card"><div class="chead"><h3>Brand files</h3><span class="muted" style="font-size:13px">${files.length} file${files.length===1?"":"s"}</span></div>
+  ${own?`<form data-form="brandfile" class="actions" style="margin-bottom:12px" novalidate><input type="file" id="bf-file" class="inp" style="flex:1;min-width:200px"><button class="btn small primary" type="submit">Upload</button></form><p class="muted" style="font-size:12px;margin:-4px 0 10px">Logo, brand guidelines, product photos, fonts. Up to 25 MB each. Your managers and booked influencers can open them.</p><div class="err" id="bfErr"></div>`:""}
+  <div class="list">${files.map(f=>`<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><span style="min-width:0;overflow-wrap:anywhere">📄 <b>${esc(f.name)}</b> <span class="muted" style="font-size:12px">${fmtSize(f.size)} · ${fdate(f.at)}</span></span><span class="actions"><button class="btn small" data-act="openf" data-arg="brand-files::${esc(f.path)}" type="button">Open</button>${own||staff?`<button class="btn small ghost" data-act="delbrandfile" data-arg="${f.id}" type="button">Delete</button>`:""}</span></div>`).join("")||`<div class="empty">No files yet. Upload your logo and brand guidelines so your team always has them.</div>`}</div></div>`}
+function brandFilesInline(biz){const files=S.brandfiles.filter(f=>f.biz===biz);if(!files.length)return "";
+  return `<div class="actions" style="font-size:13px"><span class="muted">Brand files:</span>${files.map(f=>`<button class="btn small" data-act="openf" data-arg="brand-files::${esc(f.path)}" type="button">📄 ${esc(f.name)}</button>`).join("")}</div>`}
+
 const A={
+  openf:async a=>{const i=a.indexOf("::"),bucket=a.slice(0,i),path=a.slice(i+2);try{const {data,error}=await sb.storage.from(bucket).createSignedUrl(path,3600);if(error)throw error;window.open(data.signedUrl,"_blank","noopener")}catch(e){toast(friendly(e))}},
+  delbrandfile:(a,t)=>{if(!t.dataset.armed){t.dataset.armed=1;t.textContent="Click again to delete";return}const f=S.brandfiles.find(x=>String(x.id)===String(a));
+    run(async()=>{await q(sb.from("brand_files").delete().eq("id",f.id));await sb.storage.from("brand-files").remove([f.path])},"File deleted")},
   go:a=>go(a),
   reg:a=>{ui.regRole=a;go("register")},
   logout:async()=>{const t=me()?.role==="employee";await endSession();toast("Logged out");go(t?"team":"home")},
@@ -1065,6 +1088,7 @@ const typeOptions=p=>(PLATFORM_TYPES[p]||["Post"]).map(t=>`<option>${t}</option>
 
 /* ---- change / input handlers ---- */
 const C={
+  msgfile:t=>{const f=t.files&&t.files[0];$("#msg-fname").textContent=f?(f.size>CHAT_MAX?"Too big (max 10 MB)":"📎 "+f.name):""},
   ptypes:t=>{$("#p-type").innerHTML=typeOptions(t.value)},
   dtypes:t=>{$("#d-type").innerHTML=typeOptions(t.value)},
   regrole:t=>{ui.regRole=t.value;$("#roleFields").innerHTML=roleFields(ui.regRole)},
@@ -1169,7 +1193,20 @@ const F={
     return run(()=>q(sb.from("bookings").update({status:"Reshoot",feedback:t}).eq("id",b.dbid)),"Feedback sent to "+(user(b.inf)?.name||"the influencer"))},
   research:f=>{const r=req(f.dataset.arg);return run(()=>q(sb.from("campaigns").update({research:{audience:val("rs-a"),competitors:val("rs-c"),hashtags:val("rs-h")}}).eq("id",r.dbid)),"Research brief saved")},
   brandkit:()=>run(()=>q(sb.from("brand_kits").upsert({business_id:S.current,tone:val("bk-tone"),colors:[0,1,2].map(i=>$("#bk-c"+i).value),hashtags:val("bk-tags"),audience:val("bk-aud"),dos:val("bk-dos"),donts:val("bk-donts"),updated_at:new Date().toISOString()})),"Brand kit saved"),
-  msg:async()=>{const t=val("msg-in");if(!t)return;const r=req(ui.thread);await run(()=>q(sb.from("messages").insert({campaign_id:r.dbid,sender_id:S.current,body:t})));$("#msg-in")?.focus()},
+  msg:async()=>{const t=val("msg-in"),file=$("#msg-file")?.files?.[0];if(!t&&!file)return;const r=req(ui.thread);
+    if(file&&file.size>CHAT_MAX){toast("That file is over 10 MB. Share a link instead.");return}
+    let row={campaign_id:r.dbid,sender_id:S.current,body:t};
+    if(file){$("#msg-fname").textContent="Uploading "+file.name+"…";const path=`${r.dbid}/${Date.now()}-${safeName(file.name)}`;
+      const {error}=await sb.storage.from("chat-files").upload(path,file,{contentType:file.type||"application/octet-stream"});
+      if(error){$("#msg-fname").textContent="";toast(friendly(error));return}
+      Object.assign(row,{file_path:path,file_name:file.name,file_size:file.size})}
+    await run(()=>q(sb.from("messages").insert(row)));$("#msg-in")?.focus()},
+  brandfile:async()=>{const file=$("#bf-file")?.files?.[0],E=m=>{$("#bfErr").textContent=m};
+    if(!file)return E("Choose a file to upload.");if(file.size>BRAND_MAX)return E("That file is over 25 MB. Please make it smaller or share a link in chat.");
+    E("Uploading "+file.name+"…");const path=`${S.current}/${Date.now()}-${safeName(file.name)}`;
+    const {error}=await sb.storage.from("brand-files").upload(path,file,{contentType:file.type||"application/octet-stream"});
+    if(error)return E(friendly(error));
+    return run(()=>q(sb.from("brand_files").insert({business_id:S.current,path,name:file.name,size:file.size,uploaded_by:S.current})),file.name+" uploaded")},
   settings:async()=>{const u=me(),ch={name:val("s-name")||u.name,phone:val("s-phone")||null};
     if(u.role==="business")Object.assign(ch,{company:val("s-company")||u.company,handle:val("s-handle")||null,address:val("s-address")||null});
     if(u.role==="pro")Object.assign(ch,{handle:val("s-handle"),followers:val("s-followers"),rate:+val("s-rate")||null,niche:val("s-niche"),bio:val("s-bio")});
