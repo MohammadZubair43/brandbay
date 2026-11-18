@@ -4,7 +4,7 @@
 
 BrandBay is one platform for a brand's whole marketing. A business (a restaurant, gym, salon or shop) posts what it needs. Social media managers create the content, influencers are booked to shoot at the business, and the BrandBay team keeps everything on track. All of it happens in one portal, with one login per person.
 
-> "BrandBay" is a working name. The final name (for example Collavya) and domain are still being decided. Renaming the site takes a few minutes.
+> "BrandBay" is a working name. The final name (for example Collavya) and domain are still being decided. The name is set in one place in the build, so renaming the site takes a few minutes.
 
 ---
 
@@ -274,4 +274,4 @@ Only needed for a brand-new Supabase project.
 | **Chat file deletion rule** | 30 days, after the campaign ends, or none |
 | **Stripe account** (US business) | Online payments |
 | **Packages and prices** per industry | Can be added directly in the team portal |
-| **Terms and Privacy details** | Company legal name, support email, refund policy, grievance officer. The pages are marked as drafts until then. |
+| **Terms and Privacy details** | Company legal name, support email, refund policy, and which US state's law applies. The pages are written for the US (FTC ad labels, CCPA) and stay marked as drafts until a lawyer checks them. |

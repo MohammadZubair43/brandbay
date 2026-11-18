@@ -940,7 +940,7 @@ V.influencer_earnings=u=>{const bks=myBookings().filter(b=>!["Declined","Cancell
 
 /* ================= ACTIONS ================= */
 /* ================= TERMS & PRIVACY (draft for review) ================= */
-const LEGAL_UPDATED="5 November 2026";
+const LEGAL_UPDATED="19 November 2026";
 const ph=t=>`<mark class="ph">[${t}]</mark>`;
 function legalPage(title,intro,sections){return `<div class="wrap"><article class="legal">
   <div class="draftnote"><b>Draft for review.</b> This page has not been checked by a lawyer yet. Highlighted parts still need to be filled in.</div>
@@ -960,44 +960,47 @@ function termsView(){return legalPage("Terms of Use",
     "We may suspend an account that breaks these terms, gives false information or harms other users."])],
   ["What each role agrees to",`<p><b>Businesses</b> describe their campaign honestly, review drafts and uploads promptly, and are responsible for the offers, prices and claims they ask us to promote.</p>
    <p><b>Social media managers</b> deliver the work they accept, follow the business's brand kit, and only submit content they have the right to use.</p>
-   <p><b>Influencers</b> turn up for shoots they accept, at the agreed date, time and place, and upload the agreed content. Paid or sponsored posts must be clearly labelled as advertising, as required by the ASCI influencer guidelines (for example with #ad or #collab).</p>`],
+   <p><b>Influencers</b> turn up for shoots they accept, at the agreed date, time and place, and upload the agreed content. Paid or sponsored posts must clearly show they are advertising, as required by the US Federal Trade Commission (FTC) Endorsement Guides, for example with #ad or the platform's "Paid partnership" label. Influencers share only honest opinions about products they have actually used.</p>`],
   ["Content and approvals",ul([
     "Drafts and influencer uploads are shared with the business for approval. Nothing is marked as approved without the business's say.",
     "Whoever uploads content confirms they own it or have permission to use it, including music, images and people shown in it.",
     `Once a business has paid for a campaign or shoot, it may use the approved content for its own marketing. ${ph("Confirm content ownership terms with the team")}`])],
   ["Payments",ul([
     "Each campaign request creates an invoice for the agreed budget.",
-    "Until online payment is added, invoices are paid directly to the BrandBay team, who mark them as paid in the portal.",
+    "Prices are in US dollars. Until online payment is added, invoices are paid directly to the BrandBay team, who mark them as paid in the portal.",
+    "When online payment is added, card payments will be handled by Stripe. BrandBay never sees or stores your full card number.",
     "Influencer fees are paid by the BrandBay team after the business approves the uploaded content.",
     `Refunds and cancellations: ${ph("refund and cancellation policy")}`])],
   ["Acceptable use",ul([
     "Do not post anything illegal, misleading, hateful, sexually explicit or harmful.",
     "Do not harass other users or share their personal details.",
     "Do not try to access accounts, data or parts of the portal that aren't yours.",
-    "Do not arrange work found on BrandBay outside the platform to avoid its fees."])],
+    "Do not arrange work found on BrandBay outside the platform to avoid its fees.",
+    "Do not send spam or misleading messages, or post content that breaks copyright or trademark law."])],
   ["Other platforms","<p>BrandBay helps you market on Instagram, Facebook, YouTube and other platforms. Those platforms have their own rules, which you must also follow. BrandBay is not part of or endorsed by any of them.</p>"],
   ["Results","<p>We work hard on every campaign, but we cannot guarantee specific results such as followers, reach, sales or footfall.</p>"],
   ["Our responsibility",`<p>BrandBay is provided as it is. As far as the law allows, we are not responsible for indirect losses, or for losses caused by other users or third-party platforms. Our total responsibility to you is limited to the amount you paid us in the three months before the claim. ${ph("Have this clause reviewed")}</p>`],
   ["Closing your account",`<p>You can ask us to close your account at any time by writing to ${ph("support email")}. Invoices that are already due must still be paid.</p>`],
   ["Changes to these terms","<p>We may update these terms. If the changes are important, we will tell you in the portal before they apply.</p>"],
-  ["Law and disputes",`<p>These terms follow the laws of India. Disputes will be handled by the courts in ${ph("city, for example Hyderabad")}.</p>`],
+  ["Law and disputes",`<p>These terms follow the laws of the State of ${ph("state, for example Texas")} and United States federal law. Before going to court, please contact us so we can try to solve the problem together. Disputes that can't be solved this way will be handled by the courts in ${ph("county and state")}.</p>`],
   ["Contact",`<p>Questions about these terms: ${ph("support email")}.</p>`]
 ])}
 
 function privacyView(){return legalPage("Privacy Policy",
-  `This policy explains what personal information BrandBay collects, why, and who can see it. BrandBay is run by ${ph("company legal name")}. We follow India's Digital Personal Data Protection Act, 2023.`,[
+  `This policy explains what personal information BrandBay collects, why, and who can see it. BrandBay is run by ${ph("company legal name")}. BrandBay is built for businesses and creators in the United States, and we follow the US privacy laws that apply to us, including state laws such as the California Consumer Privacy Act (CCPA).`,[
   ["What we collect",ul([
     "<b>Account details:</b> name, email, phone number, password (stored only in scrambled form), and your role.",
     "<b>Profile details:</b> for businesses, the business name, industry, social handle and outlet address. For managers and influencers, handle, follower count, niche or category, city and fees.",
     "<b>Work on the platform:</b> campaign requests, drafts, messages, bookings, reviews, brand kits, scheduled posts and the files influencers upload.",
-    "<b>Billing records:</b> invoice amounts and whether they are paid. We do not collect card or bank details.",
+    "<b>Billing records:</b> invoice amounts and whether they are paid. When online payment is added, Stripe handles card details. We never see or store your full card number.",
+    "<b>Pop-up alerts:</b> if you turn them on, your browser gives us a device address so we can send you notifications. Turning alerts off removes it.",
     "<b>Technical details:</b> your browser keeps you logged in and remembers your light or dark mode choice."])],
   ["How we use it",ul([
     "To run your account and the features you use.",
     "To connect businesses with the right managers and influencers.",
     "To send you notifications, such as shoot details, approvals and payment reminders.",
     "To keep the platform safe and to verify new managers and influencers.",
-    "We do not sell your personal information, and we do not use it for outside advertising."])],
+    "We do not sell or share your personal information, and we do not use it for outside advertising."])],
   ["Who can see your information",ul([
     "Other users see your name, business or handle, and the details needed for the work, such as an outlet address for a shoot.",
     "Other users do <b>not</b> see your email or phone number.",
@@ -1005,13 +1008,13 @@ function privacyView(){return legalPage("Privacy Policy",
     "The BrandBay team can see all accounts and activity, so it can run and support the platform."])],
   ["Services we use",`<p>We use trusted providers to run BrandBay. They handle data only to provide their service to us:</p>${ul([
     "<b>Supabase:</b> database, login and file storage.",
-    "<b>Netlify:</b> hosts the website.",
+    "<b>Vercel:</b> hosts the website.",
     "<b>jsDelivr</b> and <b>Google Fonts:</b> deliver code and fonts to your browser, so they see your internet address.",
     "Later, a payment provider (Stripe) and an email or WhatsApp service, which we will add to this list."])}`],
   ["How long we keep it",`<p>We keep your information while your account is open. When you close your account, we delete or anonymise your personal information within ${ph("number")} days, except records we must keep by law, such as invoices.</p>`],
-  ["Your rights",`<p>You can ask to see, correct or delete your personal information, or withdraw your consent, by writing to ${ph("support email")}. You can also complain to India's Data Protection Board. Our grievance officer is ${ph("name and email of grievance officer")}.</p>`],
+  ["Your rights",`<p>You can ask to see, download, correct or delete your personal information by writing to ${ph("support email")}. We will reply within 45 days. Depending on your state, you may have more rights, and we will honour them. We will not treat you differently for using any of these rights.</p>`],
   ["Security","<p>Access is controlled so each person sees only what their role allows, and connections to BrandBay are encrypted. No system is perfectly secure, so tell us right away if you notice anything wrong with your account.</p>"],
-  ["Children","<p>BrandBay is only for people aged 18 or over. We do not knowingly collect information from children.</p>"],
+  ["Children","<p>BrandBay is only for people aged 18 or over. We do not knowingly collect information from children under 13, and we will delete it if we learn we have.</p>"],
   ["Changes to this policy","<p>If we change this policy in an important way, we will tell you in the portal before it applies.</p>"],
   ["Contact",`<p>Privacy questions: ${ph("support email")}.</p>`]
 ])}
