@@ -353,7 +353,7 @@ const SB_KEY="sb_publishable_X6eF6Arf--zYRG3xGmLKAQ_t0d21mdI";
 // A password-reset email link opens the site with "type=recovery" in the address. Note it before Supabase reads and clears it.
 const RECOVERY=/type=recovery/.test(location.hash);
 const sb=window.supabase.createClient(SB_URL,SB_KEY);
-const blank=()=>({users:[],requests:[],drafts:[],messages:[],invoices:[],reviews:[],brandkits:{},socials:{},posts:[],bookings:[],notifs:[],activity:[],brandfiles:[],current:null});
+const blank=()=>({users:[],requests:[],drafts:[],messages:[],invoices:[],reviews:[],brandkits:{},socials:{},posts:[],bookings:[],notifs:[],activity:[],brandfiles:[],packages:[],current:null});
 let S=blank(),profile=null,booted=false,live=null;
 const save=()=>{};
 const dOnly=t=>t?String(t).slice(0,10):"";
@@ -400,6 +400,7 @@ async function loadAll(){
   N.notifs=notifs.map(n=>({dbid:n.id,to:n.user_id,text:n.body,link:n.link||"overview",at:n.created_at,read:n.read}));
   N.activity=acts.map(a=>({req:a.campaign_id?ref.get(a.campaign_id):undefined,by:a.actor_id,text:a.body,at:a.created_at}));
   S=N;
+  await loadPackages();
 }
 async function refresh(){try{await loadAll();render()}catch(e){console.error(e);toast(friendly(e))}}
 /* run a write, reload everything, re-render. Returns true when it worked. */
@@ -416,7 +417,7 @@ async function startSession(uid){
   profile=await q(sb.from("profiles").select("*").eq("id",uid).single());
   S.current=uid;await loadAll();startLive();refreshPush(true);
 }
-async function endSession(){stopLive();await disablePush(true);await sb.auth.signOut();ui.push=undefined;profile=null;S=blank()}
+async function endSession(){stopLive();await disablePush(true);await sb.auth.signOut();ui.push=undefined;profile=null;S=blank();loadPackages().then(()=>render())}
 
 /* ================= HELPERS ================= */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -424,9 +425,9 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const user=id=>id?(S.users.find(u=>u.id===id)||{id,name:"Former user",role:"",status:"",handle:"",company:"",email:""}):undefined;
 const req=id=>S.requests.find(r=>r.id===id);
 const me=()=>S.current?S.users.find(u=>u.id===S.current):undefined;
-const rupee=n=>"₹"+Math.round(Number(n)||0).toLocaleString("en-IN");
+const rupee=n=>"$"+Math.round(Number(n)||0).toLocaleString("en-US");
 const initials=n=>String(n||"?").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
-const fdate=d=>{const x=new Date(d);return x.toLocaleDateString("en-IN",{day:"numeric",month:"short"})};
+const fdate=d=>{const x=new Date(d);return x.toLocaleDateString("en-US",{day:"numeric",month:"short"})};
 const ago=t=>{const m=Math.round((Date.now()-new Date(t))/60000);if(m<1)return"just now";if(m<60)return m+" min ago";const h=Math.round(m/60);if(h<24)return h+" h ago";return Math.round(h/24)+" d ago"};
 const bizName=id=>{const b=user(id);return b?(b.company||b.name):"—"};
 function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2400)}
@@ -475,7 +476,7 @@ const dayLabels=n=>Array.from({length:n},(_,i)=>fdate(Date.now()-(n-1-i)*DAY));
 
 /* ================= ROUTING ================= */
 let route=location.hash.slice(1)||"home";
-const ui={campFilter:"All",reqSearch:"",reqStage:"All",userRole:"All",mkSearch:"",mkPlat:"All",mkMin:0,thread:null,calMonth:null,proTab:"active",showNotif:false,showMenu:false,search:"",draftFor:null,changesFor:null,stars:5,regRole:"business",gen:null,infCat:"All",infCity:"All",bookFor:null,bookReq:null,uploadFor:null,reshootFor:null};
+const ui={campFilter:"All",reqSearch:"",reqStage:"All",userRole:"All",mkSearch:"",mkPlat:"All",mkMin:0,thread:null,calMonth:null,proTab:"active",showNotif:false,showMenu:false,search:"",draftFor:null,changesFor:null,stars:5,regRole:"business",gen:null,homeNiche:null,pkgEdit:null,infCat:"All",infCity:"All",bookFor:null,bookReq:null,uploadFor:null,reshootFor:null};
 function go(r){route=r;ui.showNotif=ui.showMenu=false;ui.search="";if(location.hash.slice(1)!==r)location.hash=r;render();window.scrollTo(0,0)}
 window.addEventListener("hashchange",()=>{const r=location.hash.slice(1)||"home";if(r!==route){route=r;render()}});
 
@@ -483,7 +484,7 @@ const NAV={
   business:[["overview","Overview"],["social","Social accounts"],["planner","Post planner"],["campaigns","My campaigns"],["new","New request"],["influencers","Influencers"],["approvals","Approvals"],["calendar","Content calendar"],["messages","Messages"],["billing","Billing"],["brandkit","Brand kit"],["settings","Settings"]],
   pro:[["overview","Overview"],["market","Find campaigns"],["mywork","My campaigns"],["influencers","Influencers"],["studio","Caption helper"],["calendar","Content calendar"],["messages","Messages"],["earnings","Earnings"],["settings","Profile & reviews"]],
   influencer:[["overview","Overview"],["bookings","My shoots"],["calendar","Shoot calendar"],["earnings","Earnings"],["settings","Profile"]],
-  employee:[["overview","Overview"],["requests","All requests"],["bookings","Influencer bookings"],["match","Manager matching"],["users","Users"],["calendar","Content calendar"],["messages","Messages"],["revenue","Revenue"],["activity","Activity log"],["settings","Settings"]]
+  employee:[["overview","Overview"],["requests","All requests"],["packages","Packages"],["bookings","Influencer bookings"],["match","Manager matching"],["users","Users"],["calendar","Content calendar"],["messages","Messages"],["revenue","Revenue"],["activity","Activity log"],["settings","Settings"]]
 };
 function navCount(k){const u=me();
   if(k==="approvals")return S.drafts.filter(d=>req(d.req)?.biz===u.id&&d.status==="Pending").length;
@@ -570,7 +571,7 @@ function homeView(){return `<div class="wrap">
     <div class="ctas"><button class="btn primary" data-act="go" data-arg="register" type="button">Register now</button><button class="btn" data-act="go" data-arg="login" type="button">Log in</button></div></div>
     <div class="phone" aria-hidden="true"><div class="row"><span class="av" style="cursor:default">YB</span><div><b>yourbrand</b><div class="meta">Example of a brand on BrandBay</div></div></div>
       <div class="grid9">${"<span></span>".repeat(9)}</div>
-      <div class="metric"><span>Reach this month</span><b>1,24,800</b></div><div class="metric"><span>New followers</span><b>+2,310</b></div><div class="metric"><span>Posts scheduled</span><b>12</b></div></div>
+      <div class="metric"><span>Reach this month</span><b>124,800</b></div><div class="metric"><span>New followers</span><b>+2,310</b></div><div class="metric"><span>Posts scheduled</span><b>12</b></div></div>
   </section>
   <div class="label">One platform for everyone in marketing</div>
   <section class="roles">
@@ -586,8 +587,7 @@ function homeView(){return `<div class="wrap">
     <div><b>Content</b><span>Assigned pro creates drafts. Business approves or asks for changes.</span></div>
     <div><b>Live</b><span>Content goes live on the chosen platforms and results are tracked.</span></div>
   </section>
-  <div class="label">Packages</div>
-  <section class="plans">${Object.entries(PACKAGES).filter(([k])=>k!=="Custom").map(([k,p])=>`<div class="plan ${k==="Growth"?"feat":""}">${k==="Growth"?`<span class="tag t-biz">Most picked</span>`:""}<h3>${k}</h3><div class="price">${rupee(p.price)}<small> / month</small></div><p class="muted">${p.desc}</p><button class="btn ${k==="Growth"?"primary":""}" data-act="reg" data-arg="business" type="button">Choose ${k}</button></div>`).join("")}</section>
+  ${homePackages()}
 </div>`}
 
 function loginView(){return `<div class="wrap"><div class="card auth">
@@ -616,11 +616,11 @@ function roleFields(r){
     <div class="field"><label for="r-followers">Followers</label><input id="r-followers" placeholder="e.g. 80K"></div></div>
     <div class="three"><div class="field"><label for="r-cat">Category</label><select id="r-cat">${INFCATS.map(c=>`<option>${c}</option>`).join("")}</select></div>
     <div class="field"><label for="r-city">City</label><select id="r-city">${CITIES.map(c=>`<option>${c}</option>`).join("")}</select></div>
-    <div class="field"><label for="r-rate">Fee per shoot (₹)</label><input id="r-rate" type="number" placeholder="5000"></div></div>`;
+    <div class="field"><label for="r-rate">Fee per shoot ($)</label><input id="r-rate" type="number" placeholder="500"></div></div>`;
   if(r==="pro")return `<div class="two"><div class="field"><label for="r-handle">Instagram handle</label><input id="r-handle" placeholder="@yourname"></div>
     <div class="field"><label for="r-followers">Followers</label><input id="r-followers" placeholder="e.g. 25K"></div></div>
     <div class="two"><div class="field"><label for="r-niche">Niche / skills</label><input id="r-niche" placeholder="e.g. Food & Lifestyle"></div>
-    <div class="field"><label for="r-rate">Rate per post (₹)</label><input id="r-rate" type="number" placeholder="1500"></div></div>`;
+    <div class="field"><label for="r-rate">Rate per post ($)</label><input id="r-rate" type="number" placeholder="150"></div></div>`;
   return `<div class="field"><label for="r-dept">Department</label><select id="r-dept"><option>Operations</option><option>Research</option><option>Content</option><option>Sales</option></select></div>`;
 }
 function registerView(){return `<div class="wrap"><div class="card auth">
@@ -628,7 +628,7 @@ function registerView(){return `<div class="wrap"><div class="card auth">
   <form data-form="register" id="regForm" novalidate>
     <div class="pick" role="radiogroup" aria-label="Account type">${Object.entries(ROLES).filter(([k])=>k!=="employee").map(([k,v])=>`<label><input type="radio" name="role" value="${k}" ${k===ui.regRole?"checked":""} data-change="regrole">${v}<small>${k==="business"?"Manage my brand":k==="pro"?"Manage brands' social media":"Get booked for shoots"}</small></label>`).join("")}</div>
     <div class="two"><div class="field"><label for="r-name">Full name</label><input id="r-name" placeholder="Your name"></div><div class="field"><label for="r-email">Email</label><input id="r-email" type="email" placeholder="you@example.com"></div></div>
-    <div class="two"><div class="field"><label for="r-phone">Phone</label><input id="r-phone" placeholder="+91 98xxx xxxxx"></div><div class="field"><label for="r-pass">Password</label><input id="r-pass" type="password" placeholder="At least 6 characters" autocomplete="new-password"></div></div>
+    <div class="two"><div class="field"><label for="r-phone">Phone</label><input id="r-phone" placeholder="+1 555 123 4567"></div><div class="field"><label for="r-pass">Password</label><input id="r-pass" type="password" placeholder="At least 6 characters" autocomplete="new-password"></div></div>
     <div id="roleFields">${roleFields(ui.regRole)}</div>
     <label class="row" style="font-size:14px;margin-bottom:12px"><input type="checkbox" id="r-terms"> I am 18 or older and agree to the <a href="#terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="#privacy" target="_blank" rel="noopener">Privacy Policy</a></label>
     <div class="err" id="rErr"></div>
@@ -663,7 +663,7 @@ V.business_overview=u=>{
   const an=mine.map(analytics).filter(Boolean);const series=an.length?an[0].reach.map((_,i)=>an.reduce((a,x)=>a+x.reach[i],0)):null;
   const upcoming=S.drafts.filter(d=>req(d.req)?.biz===u.id&&d.status==="Approved"&&d.date>=iso(0)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,4);
   return head(`${mine.length?"Welcome back":"Welcome"}, ${esc(u.name.split(" ")[0])}`,esc(u.company),`<button class="btn primary" data-act="go" data-arg="new" type="button">New request</button>`)+
-  `<div class="stats">${stat("Active campaigns",mine.filter(r=>r.stage!=="Live").length,`${mine.length} total`)}${stat("Awaiting approval",pend.length,"posts to review")}${stat("Reach, 14 days",series?series.reduce((a,b)=>a+b,0).toLocaleString("en-IN"):"—")}${stat("Amount due",rupee(due.reduce((a,i)=>a+i.amount,0)),`${due.length} invoice${due.length===1?"":"s"}`)}</div>
+  `<div class="stats">${stat("Active campaigns",mine.filter(r=>r.stage!=="Live").length,`${mine.length} total`)}${stat("Awaiting approval",pend.length,"posts to review")}${stat("Reach, 14 days",series?series.reduce((a,b)=>a+b,0).toLocaleString("en-US"):"—")}${stat("Amount due",rupee(due.reduce((a,i)=>a+i.amount,0)),`${due.length} invoice${due.length===1?"":"s"}`)}</div>
   <div class="cols"><div class="card"><div class="chead"><h3>Daily reach across campaigns</h3><span class="muted" style="font-size:13px">Last 14 days</span></div>${series?lineChart(series,dayLabels(14)):`<div class="empty">Live reach numbers appear once your social accounts are linked to BrandBay. That arrives in the next update.</div>`}</div>
   <div class="card"><h3>Coming up next</h3><div class="list">${upcoming.length?upcoming.map(d=>`<div class="row"><div class="thumb th-${d.type}" style="width:44px;font-size:9px">${d.type}</div><div style="min-width:0"><b style="font-size:14px">${fdate(d.date)} · ${d.platform}</b><div class="muted" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.caption)}</div></div></div>`).join(""):`<div class="empty">No approved posts scheduled yet.</div>`}</div></div></div>
   <div class="card"><div class="chead"><h3>Your campaigns</h3><button class="btn small" data-act="go" data-arg="campaigns" type="button">View all</button></div><div class="list">${mine.slice(0,3).map(r=>reqCard(r)).join("")||`<div class="empty">No campaigns yet.</div>`}</div></div>`};
@@ -674,13 +674,13 @@ V.business_campaigns=u=>{const mine=myReqs().sort((a,b)=>b.id.localeCompare(a.id
   <div class="list">${list.map(r=>reqCard(r)).join("")||`<div class="empty">No campaigns in this stage.</div>`}</div></div>`};
 
 V.business_new=u=>head("New campaign request","Tell us what you need")+`<form class="card" data-form="newreq" novalidate>
-  <div class="field"><span class="flabel">Package</span><div class="pick" style="grid-template-columns:repeat(4,1fr)">${Object.entries(PACKAGES).map(([k,p],i)=>`<label><input type="radio" name="pkg" value="${k}" ${i===1?"checked":""} data-change="pkg">${k}<small>${p.price?rupee(p.price):"Your budget"}</small></label>`).join("")}</div><p class="muted" id="pkgDesc" style="font-size:13px;margin-top:-8px">${PACKAGES.Growth.desc}</p></div>
+  ${reqPackageField(u)}
   <div class="two"><div class="field"><label for="q-title">Campaign name</label><input id="q-title" placeholder="e.g. Christmas offer promo"></div><div class="field"><label for="q-deadline">Target date</label><input id="q-deadline" type="date" value="${iso(21)}" min="${iso(1)}"></div></div>
   <div class="field"><label for="q-goal">What do you want to achieve?</label><textarea id="q-goal" placeholder="e.g. 500 new followers and more walk-ins this month"></textarea></div>
   <div class="field"><label for="q-aud">Who is your target audience?</label><input id="q-aud" placeholder="e.g. Women 25–40 in Hyderabad who shop online" value="${esc(S.brandkits[u.id]?.audience||"")}"></div>
   <div class="field"><span class="flabel">Platforms</span><div class="checks">${PLATFORMS.map((p,i)=>`<label><input type="checkbox" name="plat" value="${p}" ${i===0?"checked":""}>${p}</label>`).join("")}</div></div>
   <div class="field"><span class="flabel">Services needed</span><div class="checks">${SERVICES.map((s,i)=>`<label><input type="checkbox" name="svc" value="${s}" ${i<2?"checked":""}>${s}</label>`).join("")}</div></div>
-  <div class="two"><div class="field"><label for="q-budget">Budget (₹)</label><input id="q-budget" type="number" min="1000" step="1000" value="35000"></div><div class="field"><label for="q-notes">Anything else? (optional)</label><input id="q-notes" placeholder="Reference accounts, offers, shoot locations…"></div></div>
+  <div class="two"><div class="field"><label for="q-budget">Budget ($)</label><input id="q-budget" type="number" min="100" step="50" value="${defaultBudget(u)}"></div><div class="field"><label for="q-notes">Anything else? (optional)</label><input id="q-notes" placeholder="Reference accounts, offers, shoot locations…"></div></div>
   <div class="err" id="qErr"></div><button class="btn primary" type="submit">Submit request</button></form>`;
 
 V.business_approvals=u=>{const ds=S.drafts.filter(d=>req(d.req)?.biz===u.id);const pend=ds.filter(d=>d.status==="Pending"),done=ds.filter(d=>d.status!=="Pending").slice(-6).reverse();
@@ -713,7 +713,7 @@ V.pro_overview=u=>{const mine=myReqs(),open=S.requests.filter(r=>!r.pro),fix=S.d
 
 V.pro_market=u=>{let open=S.requests.filter(r=>!r.pro);const q=ui.mkSearch.toLowerCase();
   open=open.filter(r=>(r.title+" "+bizName(r.biz)+" "+r.goal).toLowerCase().includes(q)).filter(r=>ui.mkPlat==="All"||r.platforms.includes(ui.mkPlat)).filter(r=>r.budget>=ui.mkMin).sort((a,b)=>matchScore(u,b)-matchScore(u,a));
-  return head("Find campaigns","Marketplace")+`<div class="card"><div class="toolbar"><input class="inp" id="mk-q" placeholder="Search by brand, title or goal" value="${esc(ui.mkSearch)}" data-input="mk"><select id="mk-p" data-change="mkplat" aria-label="Platform">${["All",...PLATFORMS].map(p=>`<option ${p===ui.mkPlat?"selected":""}>${p}</option>`).join("")}</select><select id="mk-b" data-change="mkmin" aria-label="Minimum budget">${[0,20000,40000,60000].map(b=>`<option value="${b}" ${b==ui.mkMin?"selected":""}>${b?"Budget ≥ "+rupee(b):"Any budget"}</option>`).join("")}</select></div>
+  return head("Find campaigns","Marketplace")+`<div class="card"><div class="toolbar"><input class="inp" id="mk-q" placeholder="Search by brand, title or goal" value="${esc(ui.mkSearch)}" data-input="mk"><select id="mk-p" data-change="mkplat" aria-label="Platform">${["All",...PLATFORMS].map(p=>`<option ${p===ui.mkPlat?"selected":""}>${p}</option>`).join("")}</select><select id="mk-b" data-change="mkmin" aria-label="Minimum budget">${[0,500,1000,2500].map(b=>`<option value="${b}" ${b==ui.mkMin?"selected":""}>${b?"Budget ≥ "+rupee(b):"Any budget"}</option>`).join("")}</select></div>
   <div class="list">${open.map(r=>reqCard(r,`<div class="actions"><span class="score">${matchScore(u,r)}% match</span><span class="muted" style="font-size:13px">Your estimated payout ${rupee(r.budget*.6)}</span><span class="spacer"></span><button class="btn small primary" data-act="accept" data-arg="${r.id}" type="button">Accept campaign</button></div>`)).join("")||`<div class="empty">No campaigns match these filters.</div>`}</div></div>`};
 
 V.pro_mywork=u=>{const mine=myReqs();const list=ui.proTab==="active"?mine.filter(r=>r.stage!=="Live"):mine.filter(r=>r.stage==="Live");
@@ -726,9 +726,9 @@ const TONES={"Warm & friendly":{open:["Good vibes only ✨","Made with love, ser
   "Fun & quirky":{open:["Plot twist: this is your sign 😜","Warning: highly addictive.","Okay but have you tried this yet?"],cta:["Tag your partner in crime!","Don't say we didn't warn you.","Slide into our DMs 😉"]}};
 V.pro_studio=u=>{const g=ui.gen;
   return head("Caption helper","Write captions and hashtags faster")+`<div class="cols"><form class="card" data-form="gen" novalidate>
-  <div class="two"><div class="field"><label for="g-brand">Brand</label><input id="g-brand" value="${esc(g?.brand||"Chai Corner")}"></div><div class="field"><label for="g-plat">Platform</label><select id="g-plat">${PLATFORMS.slice(0,5).map(p=>`<option ${g?.plat===p?"selected":""}>${p}</option>`).join("")}</select></div></div>
-  <div class="field"><label for="g-topic">What's the post about?</label><input id="g-topic" value="${esc(g?.topic||"Diwali festive combo offer at ₹149")}"></div>
-  <div class="two"><div class="field"><label for="g-tone">Tone</label><select id="g-tone">${Object.keys(TONES).map(t=>`<option ${g?.tone===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="field"><label for="g-city">City (for hashtags)</label><input id="g-city" value="${esc(g?.city||"Hyderabad")}"></div></div>
+  <div class="two"><div class="field"><label for="g-brand">Brand</label><input id="g-brand" value="${esc(g?.brand||"Your Brand")}"></div><div class="field"><label for="g-plat">Platform</label><select id="g-plat">${PLATFORMS.slice(0,5).map(p=>`<option ${g?.plat===p?"selected":""}>${p}</option>`).join("")}</select></div></div>
+  <div class="field"><label for="g-topic">What's the post about?</label><input id="g-topic" value="${esc(g?.topic||"Weekend brunch combo at $14.99")}"></div>
+  <div class="two"><div class="field"><label for="g-tone">Tone</label><select id="g-tone">${Object.keys(TONES).map(t=>`<option ${g?.tone===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="field"><label for="g-city">City (for hashtags)</label><input id="g-city" value="${esc(g?.city||"Austin")}"></div></div>
   <button class="btn primary" type="submit">Generate captions</button></form>
   <div class="card"><h3>Suggestions</h3><div class="out">${g?g.out.map((c,i)=>`<div class="item"><p class="caption">${esc(c)}</p><div class="actions"><button class="btn small" data-act="copy" data-arg="${i}" type="button">Copy</button></div></div>`).join(""):`<div class="empty">Fill in the details and press Generate. You'll get three captions with hashtags.</div>`}</div></div></div>`};
 
@@ -770,7 +770,7 @@ V.employee_users=u=>{const list=S.users.filter(x=>ui.userRole==="All"||x.role===
 
 V.employee_revenue=u=>{const inv=S.invoices,paid=inv.filter(i=>i.status==="Paid").reduce((a,i)=>a+i.amount,0),due=inv.filter(i=>i.status==="Due").reduce((a,i)=>a+i.amount,0);
   const byBiz=S.users.filter(x=>x.role==="business").map(b=>({label:b.company,value:inv.filter(i=>i.biz===b.id).reduce((a,i)=>a+i.amount,0)})).filter(x=>x.value);
-  const byPkg=Object.keys(PACKAGES).map(p=>({label:p,value:S.requests.filter(r=>r.pkg===p).reduce((a,r)=>a+r.budget,0)})).filter(x=>x.value);
+  const byPkg=[...new Set(S.requests.map(r=>r.pkg))].map(p=>({label:p,value:S.requests.filter(r=>r.pkg===p).reduce((a,r)=>a+r.budget,0)})).filter(x=>x.value);
   return head("Revenue","Platform earns 40% of each campaign")+`<div class="stats">${stat("Total billed",rupee(paid+due))}${stat("Collected",rupee(paid))}${stat("Outstanding",rupee(due))}${stat("Platform margin",rupee((paid+due)*.4),"40% of billed")}</div>
   <div class="cols2"><div class="card"><h3>Billed by business</h3>${bars(byBiz,rupee)}</div><div class="card"><h3>Budget by package</h3>${bars(byPkg,rupee)}</div></div>
   <div class="card"><h3>All invoices</h3><div class="tablewrap"><table><thead><tr><th>Invoice</th><th>Business</th><th>Campaign</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>${[...inv].sort((a,b)=>b.id.localeCompare(a.id)).map(i=>`<tr><td class="mono">${i.id}</td><td>${esc(bizName(i.biz))}</td><td><button class="linkbtn" data-act="go" data-arg="c-${i.req}" type="button">${esc(req(i.req)?.title||i.req)}</button></td><td class="num">${rupee(i.amount)}</td><td>${fdate(i.due)}</td><td><span class="status s-${i.status}">${i.status}</span></td><td>${i.status==="Due"?`<div class="actions"><button class="btn small okb" data-act="markpaid" data-arg="${i.id}" type="button">Mark paid</button><button class="btn small" data-act="remind" data-arg="${i.id}" type="button">Send reminder</button></div>`:""}</td></tr>`).join("")}</tbody></table></div></div>`};
@@ -786,7 +786,7 @@ V.calendar=u=>{
   const ps=myPosts(),sh=myBookings().filter(b=>b.status!=="Declined"&&b.status!=="Cancelled");
   const cells=[];for(let i=0;i<42;i++){const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;cells.push({d,key,other:d.getMonth()!==m})}
   const today=iso(0);const mk=(dy,dm)=>{const d=new Date(y,m+dm,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`};
-  return head("Content calendar",esc(first.toLocaleDateString("en-IN",{month:"long",year:"numeric"})),`<div class="actions"><button class="btn small" data-act="cal" data-arg="${mk(0,-1)}" type="button">← Prev</button><button class="btn small" data-act="cal" data-arg="" type="button">Today</button><button class="btn small" data-act="cal" data-arg="${mk(0,1)}" type="button">Next →</button></div>`)+
+  return head("Content calendar",esc(first.toLocaleDateString("en-US",{month:"long",year:"numeric"})),`<div class="actions"><button class="btn small" data-act="cal" data-arg="${mk(0,-1)}" type="button">← Prev</button><button class="btn small" data-act="cal" data-arg="" type="button">Today</button><button class="btn small" data-act="cal" data-arg="${mk(0,1)}" type="button">Next →</button></div>`)+
   `<div class="card"><div class="chips" style="margin-bottom:12px"><span class="chip ev-Post">Post</span><span class="chip ev-Reel">Reel</span><span class="chip ev-Story">Story</span><span class="chip ev-Own">Your own post</span><span class="chip ev-Shoot">Influencer shoot</span><span class="muted" style="font-size:13px">Pending drafts show with a dot</span></div><div class="calwrap"><div class="cal">${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=>`<div class="dow">${d}</div>`).join("")}
   ${cells.map(c=>`<div class="day ${c.other?"other":""} ${c.key===today?"today":""}"><span class="n">${c.d.getDate()}</span>${ds.filter(d=>d.date===c.key).map(d=>`<button class="ev ev-${d.type}" data-act="go" data-arg="c-${d.req}" type="button" title="${esc(d.caption)}">${d.status==="Pending"?"● ":""}${d.type} · ${esc(bizName(req(d.req).biz))}</button>`).join("")}${ps.filter(p=>p.date===c.key).map(p=>`<button class="ev ev-Own" data-act="go" data-arg="planner" type="button" title="${esc(p.caption)}">${p.time} ${esc(p.platform)}</button>`).join("")}${sh.filter(b=>b.date===c.key).map(b=>`<button class="ev ev-Shoot" data-act="go" data-arg="${bkRoute(S.current)}" type="button" title="${esc(b.location)}">🎬 ${b.time} ${esc(me().role==="influencer"?bizName(b.biz):user(b.inf).name.split(" ")[0])}</button>`).join("")}</div>`).join("")}</div></div></div>`};
 
@@ -796,16 +796,16 @@ V.messages=u=>{const rs=myReqs().filter(r=>u.role==="employee"||r.pro||r.biz===u
   return head("Messages","One thread per campaign")+(rs.length?`<div class="chat"><div class="threads">${rs.map(x=>{const last=S.messages.filter(m=>m.req===x.id).slice(-1)[0];return `<button class="thread" data-act="thread" data-arg="${x.id}" aria-current="${x.id===ui.thread}" type="button"><b style="font-size:14px">${esc(x.title)}</b><small>${last?esc(user(last.from)?.name.split(" ")[0]+": "+(last.text||"📎 "+last.fname)):"No messages yet"}</small></button>`}).join("")}</div>
   <div class="convo"><div class="ch"><b>${esc(r.title)}</b><div class="meta"><span>${esc(bizName(r.biz))}</span><span>Manager: ${esc(user(r.pro)?.name||"not assigned")}</span><span>Team: BrandBay</span></div></div>
   <div class="msgs">${ms.map(m=>{const f=user(m.from);return `<div class="msg ${m.from===u.id?"mine":""}"><small>${esc(f?.name||"")} · ${ROLES[f?.role]||""}</small>${m.text?`<div class="bub">${esc(m.text)}</div>`:""}${m.file?`<button class="filechip" data-act="openf" data-arg="chat-files::${esc(m.file)}" type="button">📎 ${esc(m.fname)} <span>${fmtSize(m.fsize)}</span></button>`:""}<small>${ago(m.at)}</small></div>`}).join("")||`<div class="empty">Say hello to start the conversation.</div>`}</div>
-  <form class="compose" data-form="msg"><label class="btn attach" for="msg-file" title="Attach a file (up to 10 MB)" aria-label="Attach a file">📎</label><input type="file" id="msg-file" hidden data-change="msgfile"><span id="msg-fname" class="fname"></span><input id="msg-in" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn primary" type="submit">Send</button></form></div></div>`:`<div class="card"><div class="empty">Messages open once you have a campaign.</div></div>`)};
+  <form class="compose" data-form="msg"><label class="btn attach" for="msg-file" title="Attach a file (up to 50 MB)" aria-label="Attach a file">📎</label><input type="file" id="msg-file" hidden data-change="msgfile"><span id="msg-fname" class="fname"></span><input id="msg-in" placeholder="Write a message…" autocomplete="off" aria-label="Message"><button class="btn primary" type="submit">Send</button></form></div></div>`:`<div class="card"><div class="empty">Messages open once you have a campaign.</div></div>`)};
 
 V.settings=u=>{const revs=S.reviews.filter(r=>r.pro===u.id);
   return head(u.role==="pro"?"Profile & reviews":"Settings")+`<div class="cols"><form class="card" data-form="settings" novalidate><div class="row" style="margin-bottom:16px"><span class="av lg">${initials(u.name)}</span><div><b style="font-size:17px">${esc(u.name)}</b><div class="muted">${ROLES[u.role]} · joined ${fdate(u.joined)}</div></div></div>
   <div class="two"><div class="field"><label for="s-name">Full name</label><input id="s-name" value="${esc(u.name)}"></div><div class="field"><label for="s-phone">Phone</label><input id="s-phone" value="${esc(u.phone||"")}"></div></div>
   <div class="field"><label for="s-email">Email</label><input id="s-email" type="email" value="${esc(u.email)}" readonly title="Contact the BrandBay team to change your email"></div>
   ${u.role==="business"?`<div class="two"><div class="field"><label for="s-company">Business name</label><input id="s-company" value="${esc(u.company||"")}"></div><div class="field"><label for="s-handle">Main social handle</label><input id="s-handle" value="${esc(u.handle||"")}"></div></div><div class="field"><label for="s-address">Outlet address (used for influencer shoots)</label><input id="s-address" value="${esc(u.address||"")}"></div>`:""}
-  ${u.role==="pro"?`<div class="three"><div class="field"><label for="s-handle">Handle</label><input id="s-handle" value="${esc(u.handle||"")}"></div><div class="field"><label for="s-followers">Followers</label><input id="s-followers" value="${esc(u.followers||"")}"></div><div class="field"><label for="s-rate">Rate / post (₹)</label><input id="s-rate" type="number" value="${u.rate||""}"></div></div>
+  ${u.role==="pro"?`<div class="three"><div class="field"><label for="s-handle">Handle</label><input id="s-handle" value="${esc(u.handle||"")}"></div><div class="field"><label for="s-followers">Followers</label><input id="s-followers" value="${esc(u.followers||"")}"></div><div class="field"><label for="s-rate">Rate / post ($)</label><input id="s-rate" type="number" value="${u.rate||""}"></div></div>
   <div class="field"><label for="s-niche">Niche</label><input id="s-niche" value="${esc(u.niche||"")}"></div><div class="field"><label for="s-bio">Bio</label><textarea id="s-bio">${esc(u.bio||"")}</textarea></div>`:""}
-  ${u.role==="influencer"?`<div class="three"><div class="field"><label for="s-handle">Handle</label><input id="s-handle" value="${esc(u.handle||"")}"></div><div class="field"><label for="s-followers">Followers</label><input id="s-followers" value="${esc(u.followers||"")}"></div><div class="field"><label for="s-rate">Fee per shoot (₹)</label><input id="s-rate" type="number" value="${u.rate||""}"></div></div>
+  ${u.role==="influencer"?`<div class="three"><div class="field"><label for="s-handle">Handle</label><input id="s-handle" value="${esc(u.handle||"")}"></div><div class="field"><label for="s-followers">Followers</label><input id="s-followers" value="${esc(u.followers||"")}"></div><div class="field"><label for="s-rate">Fee per shoot ($)</label><input id="s-rate" type="number" value="${u.rate||""}"></div></div>
   <div class="two"><div class="field"><label for="s-cat">Category</label><select id="s-cat">${INFCATS.map(c=>`<option ${c===u.category?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label for="s-city">City</label><select id="s-city">${CITIES.map(c=>`<option ${c===u.city?"selected":""}>${c}</option>`).join("")}</select></div></div>
   <div class="field"><label for="s-bio">Bio</label><textarea id="s-bio">${esc(u.bio||"")}</textarea></div>`:""}
   <div class="field"><span class="flabel">Email me about</span><div class="checks"><label><input type="checkbox" checked> New messages</label><label><input type="checkbox" checked> Campaign updates</label><label><input type="checkbox"> Weekly report</label></div></div>
@@ -827,7 +827,7 @@ function detailView(r){
    ${canEditStage?`<div class="actions">${r.stage!=="Live"?`<button class="btn small primary" data-act="advance" data-arg="${r.id}" type="button">Move to ${STAGES[STAGES.indexOf(r.stage)+1]}</button>`:""}${r.stage!=="Submitted"&&u.role==="employee"?`<button class="btn small ghost" data-act="back" data-arg="${r.id}" type="button">Move back</button>`:""}</div>`:""}
    ${u.role==="pro"&&!r.pro?`<div class="actions"><button class="btn primary" data-act="accept" data-arg="${r.id}" type="button">Accept this campaign</button></div>`:""}</div>
 
-  ${an?`<div class="stats">${stat("Reach, 14 days",an.total.toLocaleString("en-IN"))}${stat("New followers","+"+an.followers.toLocaleString("en-IN"))}${stat("Engagement",an.engagement+"%")}${stat("Leads",an.leads,an.clicks.toLocaleString("en-IN")+" link clicks")}</div>
+  ${an?`<div class="stats">${stat("Reach, 14 days",an.total.toLocaleString("en-US"))}${stat("New followers","+"+an.followers.toLocaleString("en-US"))}${stat("Engagement",an.engagement+"%")}${stat("Leads",an.leads,an.clicks.toLocaleString("en-US")+" link clicks")}</div>
   <div class="card"><div class="chead"><h3>Daily reach</h3><span class="muted" style="font-size:13px">Demo numbers</span></div>${lineChart(an.reach,dayLabels(14))}</div>`:""}
 
   <div class="cols"><div style="display:grid;gap:20px;min-width:0">
@@ -854,14 +854,14 @@ V.business_social=u=>{const so=socialsOf(u.id),on=Object.entries(so).filter(([k,
   const total=on.reduce((a,[k,v])=>a+v.followers,0),wk=on.reduce((a,[k,v])=>a+v.growth,0);
   const sched=myPosts().filter(p=>p.status==="Scheduled").length+S.drafts.filter(d=>req(d.req)?.biz===u.id&&d.status==="Approved"&&d.date>=iso(0)).length;
   return head("Social accounts","Manage all your social media from one place",`<button class="btn primary" data-act="go" data-arg="planner" type="button">Schedule a post</button>`)+
-  `<div class="stats">${stat("Total followers",total.toLocaleString("en-IN"),`+${wk.toLocaleString("en-IN")} this week`)}${stat("Connected accounts",on.length+" / "+Object.keys(SOCIALS).length)}${stat("Posts scheduled",sched)}${stat("Influencer shoots",myBookings().filter(b=>b.status==="Accepted"||b.status==="Requested").length,"upcoming")}</div>
+  `<div class="stats">${stat("Total followers",total.toLocaleString("en-US"),`+${wk.toLocaleString("en-US")} this week`)}${stat("Connected accounts",on.length+" / "+Object.keys(SOCIALS).length)}${stat("Posts scheduled",sched)}${stat("Influencer shoots",myBookings().filter(b=>b.status==="Accepted"||b.status==="Requested").length,"upcoming")}</div>
   <div class="card"><h3>Your accounts</h3><div class="social">${Object.keys(SOCIALS).map(k=>{const a=so[k]||{on:false};return `<div class="plat"><div class="row"><span class="pl-ic" style="background:${SOCIALS[k]}">${k[0]}</span><div style="min-width:0;flex:1"><b>${k}</b><div class="muted" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.on?esc(a.handle):"Not connected"}</div></div><span class="status s-${a.on?"Connected":"Off"}">${a.on?"Connected":"Off"}</span></div>
-    ${a.on?`<div><span class="big num">${a.followers.toLocaleString("en-IN")}</span> <span class="muted" style="font-size:13px">followers</span></div>${a.growth?`<span class="up">▲ ${a.growth} this week</span>`:`<span class="muted" style="font-size:12px">Entered by hand</span>`}
+    ${a.on?`<div><span class="big num">${a.followers.toLocaleString("en-US")}</span> <span class="muted" style="font-size:13px">followers</span></div>${a.growth?`<span class="up">▲ ${a.growth} this week</span>`:`<span class="muted" style="font-size:12px">Entered by hand</span>`}
     <div class="actions"><button class="btn small" data-act="go" data-arg="planner" type="button">Post</button><button class="btn small ghost" data-act="disconnect" data-arg="${k}" type="button">Disconnect</button></div>`
     :(ui.connectFor===k?`<form data-form="social" data-arg="${k}" novalidate style="display:grid;gap:8px"><input class="inp" id="sc-handle" placeholder="${k} handle or page name"><input class="inp" id="sc-followers" type="number" min="0" placeholder="Current followers (optional)"><div class="err" id="scErr"></div><div class="actions"><button class="btn small primary" type="submit">Save</button><button class="btn small ghost" data-act="cancelconnect" type="button">Cancel</button></div></form>`
       :`<p class="muted" style="font-size:13px">Add your ${k} account so your manager and the team know where to post.</p><div class="actions"><button class="btn small primary" data-act="connect" data-arg="${k}" type="button">Add ${k}</button></div>`)}</div>`}).join("")}</div>
   <p class="muted" style="font-size:13px;margin-top:12px">Automatic posting and live follower numbers arrive in the next update, when BrandBay signs in to each platform. For now, accounts and follower counts are entered by hand.</p></div>
-  ${on.length?`<div class="card"><h3>Followers by platform</h3>${bars(on.map(([k,v])=>({label:k,value:v.followers,color:SOCIALS[k]})),v=>v.toLocaleString("en-IN"))}</div>`:""}`};
+  ${on.length?`<div class="card"><h3>Followers by platform</h3>${bars(on.map(([k,v])=>({label:k,value:v.followers,color:SOCIALS[k]})),v=>v.toLocaleString("en-US"))}</div>`:""}`};
 
 V.business_planner=u=>{const so=socialsOf(u.id),on=Object.keys(so).filter(k=>so[k].on);
   const own=myPosts().map(p=>({...p,src:"You"})),fromMgr=S.drafts.filter(d=>req(d.req)?.biz===u.id&&d.status==="Approved").map(d=>({id:d.id,platform:d.platform,type:d.type,caption:d.caption,hashtags:d.hashtags,date:d.date,time:"—",status:d.date<iso(0)?"Posted":"Scheduled",src:user(d.pro)?.name||"Manager",mgr:true}));
@@ -888,11 +888,11 @@ function bookingItem(b){const u=me(),i=user(b.inf),mine=u.role!=="influencer";
       :`<div class="actions"><button class="btn small primary" data-act="openupload" data-arg="${b.id}" type="button">${b.status==="Reshoot"?"Upload new version":"Upload content"}</button></div>`;
   }else{
     if(b.status==="Uploaded")act=ui.reshootFor===b.id?`<form data-form="reshoot" data-arg="${b.id}" class="actions" novalidate><input class="inp" id="rs-fb" placeholder="What should the influencer change?" style="flex:1;min-width:180px"><button class="btn small badb" type="submit">Send</button><button class="btn small ghost" data-act="cancelreshoot" type="button">Cancel</button></form>`
-      :`<div class="actions"><button class="btn small okb" data-act="bkapprove" data-arg="${b.id}" type="button">Approve (₹${b.fee.toLocaleString("en-IN")})</button><button class="btn small" data-act="bkreshoot" data-arg="${b.id}" type="button">Ask for changes</button></div>`;
+      :`<div class="actions"><button class="btn small okb" data-act="bkapprove" data-arg="${b.id}" type="button">Approve (${rupee(b.fee)})</button><button class="btn small" data-act="bkreshoot" data-arg="${b.id}" type="button">Ask for changes</button></div>`;
     else if(b.status==="Requested"||b.status==="Accepted")act=`<div class="actions"><button class="btn small" data-act="bkremind" data-arg="${b.id}" type="button">Send reminder</button><button class="btn small ghost" data-act="bkcancel" data-arg="${b.id}" type="button">Cancel booking</button></div>`;
   }
   return `<div class="item"><div class="hd"><div class="row" style="align-items:flex-start"><span class="av" style="cursor:default;background:linear-gradient(135deg,var(--ok),var(--violet))">${initials(u.role==="influencer"?bizName(b.biz):i.name)}</span><div><b>${b.deliverable} · ${esc(u.role==="influencer"?bizName(b.biz):i.name)}</b><div class="meta"><span class="mono">${b.id}</span>${u.role==="influencer"?"":`<span>${esc(i.handle)}</span><span>for ${esc(bizName(b.biz))}</span>`}${b.req?`<span>${esc(req(b.req)?.title||"")}</span>`:""}</div></div></div><span class="status s-${b.status}">${b.status==="Reshoot"?"Changes asked":b.status}</span></div>
-  <div class="meta" style="color:var(--ink);font-size:14px"><span>📅 <b>${new Date(b.date).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}, ${b.time}</b></span><span>📍 ${esc(b.location)}</span><span class="num">💰 ${rupee(b.fee)}</span></div>
+  <div class="meta" style="color:var(--ink);font-size:14px"><span>📅 <b>${new Date(b.date).toLocaleDateString("en-US",{weekday:"short",day:"numeric",month:"short"})}, ${b.time}</b></span><span>📍 ${esc(b.location)}</span><span class="num">💰 ${rupee(b.fee)}</span></div>
   ${b.brief?`<div class="meta">Brief: ${esc(b.brief)}</div>`:""}${u.role==="influencer"?brandFilesInline(b.biz):""}
   ${b.link||b.path?`<div style="font-size:14px;display:grid;gap:4px">Uploaded:${b.link?` <a class="uplink" href="${esc(b.link)}" target="_blank" rel="noopener">${esc(b.link)}</a>`:""}${b.path?`<div><button class="btn small" data-act="openfile" data-arg="${esc(b.path)}" type="button">▶ Open video</button></div>`:""}${b.caption?`<div class="muted">“${esc(b.caption)}”</div>`:""}</div>`:""}
   ${b.feedback&&b.status==="Reshoot"?`<div class="feedback">Feedback: ${esc(b.feedback)}</div>`:""}${act}</div>`}
@@ -902,7 +902,7 @@ function bookForm(u){const i=user(ui.bookFor);if(!i)return"";const reqs=u.role==
   return `<form class="card" data-form="book" novalidate style="border-color:var(--accent)"><div class="chead"><h3>Book ${esc(i.name)} <span class="muted" style="font-weight:500;font-size:14px">${esc(i.handle)} · ${esc(i.followers)} followers</span></h3><button class="btn small ghost" data-act="cancelbook" type="button">Close</button></div>
   <div class="two"><div class="field"><label for="b-req">Campaign ${u.role==="business"?"(optional)":""}</label><select id="b-req" data-change="bkreq">${u.role==="business"?`<option value="">Not linked to a campaign</option>`:""}${reqs.map(r=>`<option value="${r.id}" ${pre&&pre.id===r.id?"selected":""}>${esc(r.title)} · ${esc(bizName(r.biz))}</option>`).join("")}</select></div>
   <div class="field"><label for="b-del">What to shoot</label><select id="b-del">${DELIVERABLES.map(d=>`<option>${d}</option>`).join("")}</select></div></div>
-  <div class="three"><div class="field"><label for="b-date">Shoot date</label><input id="b-date" type="date" value="${iso(3)}" min="${iso(0)}"></div><div class="field"><label for="b-time">Time</label><input id="b-time" type="time" value="16:00"></div><div class="field"><label for="b-fee">Fee (₹)</label><input id="b-fee" type="number" value="${i.rate||5000}"></div></div>
+  <div class="three"><div class="field"><label for="b-date">Shoot date</label><input id="b-date" type="date" value="${iso(3)}" min="${iso(0)}"></div><div class="field"><label for="b-time">Time</label><input id="b-time" type="time" value="16:00"></div><div class="field"><label for="b-fee">Fee ($)</label><input id="b-fee" type="number" value="${i.rate||5000}"></div></div>
   <div class="field"><label for="b-loc">Shoot location</label><input id="b-loc" value="${esc(loc)}" placeholder="Outlet address"></div>
   <div class="field"><label for="b-brief">Brief for the influencer</label><textarea id="b-brief" placeholder="What to show, offers to mention, tags to use"></textarea></div>
   <div class="err" id="bErr"></div><button class="btn primary" type="submit">Send booking to ${esc(i.name.split(" ")[0])}</button>
@@ -930,7 +930,7 @@ V.influencer_overview=u=>{const bks=myBookings(),nxt=bks.filter(b=>b.status==="A
   return head(`Hi, ${esc(u.name.split(" ")[0])}`,`${esc(u.handle)} · ${esc(u.followers)} followers`)+
   (u.status==="Unverified"?`<div class="card" style="border-color:var(--warn)"><b>Your profile is being verified.</b> <span class="muted">Brands can book you once the BrandBay team verifies your account.</span></div>`:"")+
   `<div class="stats">${stat("New requests",reqs.length,"accept or decline")}${stat("Upcoming shoots",bks.filter(b=>b.status==="Accepted").length)}${stat("To upload",todo.length)}${stat("Earned",rupee(earned),"from approved shoots")}</div>
-  ${nxt?`<div class="next"><span class="label">Your next shoot</span><h3>${esc(bizName(nxt.biz))} · ${nxt.deliverable}</h3><p>📅 ${new Date(nxt.date).toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"})} at ${nxt.time}</p><p>📍 ${esc(nxt.location)}</p>${nxt.brief?`<p style="font-size:14px">Brief: ${esc(nxt.brief)}</p>`:""}</div>`:""}
+  ${nxt?`<div class="next"><span class="label">Your next shoot</span><h3>${esc(bizName(nxt.biz))} · ${nxt.deliverable}</h3><p>📅 ${new Date(nxt.date).toLocaleDateString("en-US",{weekday:"long",day:"numeric",month:"long"})} at ${nxt.time}</p><p>📍 ${esc(nxt.location)}</p>${nxt.brief?`<p style="font-size:14px">Brief: ${esc(nxt.brief)}</p>`:""}</div>`:""}
   <div class="card"><div class="chead"><h3>New shoot requests (${reqs.length})</h3><button class="btn small" data-act="go" data-arg="bookings" type="button">All shoots</button></div><div class="list">${reqs.map(bookingItem).join("")||`<div class="empty">No new requests. Brands will book you here.</div>`}</div></div>`};
 V.influencer_bookings=u=>{const bks=myBookings().sort((a,b)=>b.date.localeCompare(a.date));const groups=[["To do",bks.filter(b=>["Requested","Accepted","Reshoot"].includes(b.status))],["Waiting for brand review",bks.filter(b=>b.status==="Uploaded")],["Completed",bks.filter(b=>["Approved","Declined","Cancelled"].includes(b.status))]];
   return head("My shoots","Accept, shoot, upload, get paid")+groups.map(([t,l])=>`<div class="card"><h3>${t} (${l.length})</h3><div class="list">${l.map(bookingItem).join("")||`<div class="empty">Nothing here.</div>`}</div></div>`).join("")};
@@ -1007,7 +1007,7 @@ function privacyView(){return legalPage("Privacy Policy",
     "<b>Supabase:</b> database, login and file storage.",
     "<b>Netlify:</b> hosts the website.",
     "<b>jsDelivr</b> and <b>Google Fonts:</b> deliver code and fonts to your browser, so they see your internet address.",
-    "Later, a payment provider (such as Razorpay) and an email or WhatsApp service, which we will add to this list."])}`],
+    "Later, a payment provider (Stripe) and an email or WhatsApp service, which we will add to this list."])}`],
   ["How long we keep it",`<p>We keep your information while your account is open. When you close your account, we delete or anonymise your personal information within ${ph("number")} days, except records we must keep by law, such as invoices.</p>`],
   ["Your rights",`<p>You can ask to see, correct or delete your personal information, or withdraw your consent, by writing to ${ph("support email")}. You can also complain to India's Data Protection Board. Our grievance officer is ${ph("name and email of grievance officer")}.</p>`],
   ["Security","<p>Access is controlled so each person sees only what their role allows, and connections to BrandBay are encrypted. No system is perfectly secure, so tell us right away if you notice anything wrong with your account.</p>"],
@@ -1062,8 +1062,70 @@ function pushCard(){const st=ui.push||"unsupported";if(st==="unconfigured")retur
   ${st==="on"?`<button class="btn small" data-act="pushoff" type="button">Turn off on this device</button>`:st==="off"?`<button class="btn small primary" data-act="pushon" type="button">Turn on alerts</button>`:""}</div>`}
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{const u=e.data&&e.data.go;if(!u)return;try{const h=decodeURIComponent(new URL(u,location.href).hash.slice(1));if(h)go(h)}catch(_){}});
 
+/* ================= PACKAGES PER NICHE (managed by the team) ================= */
+const NICHES=Object.keys(INDUSTRY_KEYS);
+const PERIODS={month:"/ month",once:"one-time"};
+const pkgLabel=p=>p?`${p.name} (${p.niche})`:"Custom";
+const activePkgs=niche=>S.packages.filter(p=>p.active&&(!niche||p.niche===niche)).sort((a,b)=>a.sort-b.sort||a.price-b.price);
+const pkgNiches=()=>NICHES.filter(n=>activePkgs(n).length);
+async function loadPackages(){try{const rows=await q(sb.from("packages").select("*").order("sort").order("price"));
+  S.packages=rows.map(p=>({id:p.id,niche:p.niche,name:p.name,price:p.price,period:p.period,description:p.description||"",features:p.features||[],active:p.active,sort:p.sort}))}catch(e){console.error(e);S.packages=S.packages||[]}}
+
+/* Home page: packages by niche, or a quote message when none are set yet */
+function homePackages(){const niches=pkgNiches();
+  if(!niches.length)return `<div class="label">Packages</div><section class="card" style="margin-block:12px 64px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap"><div><h3 style="font-size:22px">Packages made for your industry</h3><p class="muted" style="margin-top:6px">Restaurants, fitness, fashion, real estate and more each get their own plan. Register and tell us what you need, and we'll send you a quote.</p></div><button class="btn primary" data-act="reg" data-arg="business" type="button">Get a quote</button></section>`;
+  const n=niches.includes(ui.homeNiche)?ui.homeNiche:niches[0],list=activePkgs(n);
+  return `<div class="label">Packages</div>
+  <div class="tabs" style="margin-block:12px">${niches.map(x=>`<button type="button" data-act="homeniche" data-arg="${esc(x)}" aria-pressed="${x===n}">${esc(x)}</button>`).join("")}</div>
+  <section class="plans">${list.map((p,i)=>`<div class="plan ${i===1?"feat":""}">${i===1?`<span class="tag t-biz">Most picked</span>`:""}<h3>${esc(p.name)}</h3><div class="price">${rupee(p.price)}<small> ${PERIODS[p.period]||""}</small></div><p class="muted">${esc(p.description)}</p>${p.features.length?`<ul>${p.features.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>`:""}<button class="btn ${i===1?"primary":""}" data-act="reg" data-arg="business" type="button">Choose ${esc(p.name)}</button></div>`).join("")}</section>
+  <p class="muted" style="font-size:14px;margin:-48px 0 56px">Need something different? Register and pick <b>Custom</b> to get a quote.</p>`}
+
+/* New request: pick the niche, then one of its packages or Custom */
+function pkgOptions(niche,selected){const list=activePkgs(niche);
+  return `<div class="pick" style="grid-template-columns:repeat(${Math.min(list.length+1,4)},1fr)">${list.map((p,i)=>`<label><input type="radio" name="pkg" value="${p.id}" ${(selected?String(selected)===String(p.id):i===0)?"checked":""} data-change="pkg">${esc(p.name)}<small>${rupee(p.price)} ${PERIODS[p.period]||""}</small></label>`).join("")}<label><input type="radio" name="pkg" value="custom" ${(!list.length||selected==="custom")?"checked":""} data-change="pkg">Custom<small>Your budget</small></label></div>
+  <p class="muted" id="pkgDesc" style="font-size:13px;margin-top:-8px">${list.length?esc((list.find(p=>String(p.id)===String(selected))||list[0]).description):"Tell us your budget and what you need. Our team will send a quote."}</p>`}
+function reqPackageField(u){const niche=NICHES.includes(u.industry)?u.industry:NICHES[0];
+  return `<div class="two"><div class="field"><label for="q-niche">Your industry</label><select id="q-niche" data-change="reqniche">${NICHES.map(n=>`<option ${n===niche?"selected":""}>${esc(n)}</option>`).join("")}</select></div><div></div></div>
+  <div class="field"><span class="flabel">Package</span><div id="pkgOpts">${pkgOptions(niche)}</div></div>`}
+function defaultBudget(u){const p=activePkgs(NICHES.includes(u.industry)?u.industry:NICHES[0])[0];return p?p.price:1000}
+
+/* Team portal: add, edit, pause and delete packages */
+function pkgForm(p){p=p||{niche:NICHES[0],name:"",price:"",period:"month",description:"",features:[],active:true,sort:0};
+  return `<form class="card" data-form="pkgsave" data-arg="${p.id||""}" novalidate style="border-color:var(--accent)"><div class="chead"><h3>${p.id?"Edit package":"New package"}</h3><button class="btn small ghost" data-act="pkgcancel" type="button">Close</button></div>
+  <div class="three"><div class="field"><label for="pk-niche">Industry</label><select id="pk-niche">${NICHES.map(n=>`<option ${n===p.niche?"selected":""}>${esc(n)}</option>`).join("")}</select></div>
+  <div class="field"><label for="pk-name">Package name</label><input id="pk-name" value="${esc(p.name)}" placeholder="e.g. Growth"></div>
+  <div class="field"><label for="pk-price">Price ($)</label><input id="pk-price" type="number" min="0" step="1" value="${p.price}"></div></div>
+  <div class="three"><div class="field"><label for="pk-period">Billing</label><select id="pk-period"><option value="month" ${p.period==="month"?"selected":""}>Per month</option><option value="once" ${p.period==="once"?"selected":""}>One-time</option></select></div>
+  <div class="field"><label for="pk-sort">Order (lower shows first)</label><input id="pk-sort" type="number" value="${p.sort||0}"></div>
+  <div class="field"><span class="flabel">Visible to clients</span><label class="row" style="font-size:14px;padding-top:8px"><input type="checkbox" id="pk-active" ${p.active?"checked":""}> Show on the website</label></div></div>
+  <div class="field"><label for="pk-desc">Short description</label><input id="pk-desc" value="${esc(p.description)}" placeholder="e.g. 12 posts + 4 reels a month on 2 platforms"></div>
+  <div class="field"><label for="pk-feat">What's included (one per line)</label><textarea id="pk-feat" placeholder="12 posts a month&#10;4 reels&#10;Monthly report">${esc(p.features.join("\n"))}</textarea></div>
+  <div class="err" id="pkErr"></div><button class="btn primary" type="submit">${p.id?"Save changes":"Add package"}</button></form>`}
+V.employee_packages=u=>{const groups=NICHES.map(n=>[n,S.packages.filter(p=>p.niche===n).sort((a,b)=>a.sort-b.sort||a.price-b.price)]).filter(([,l])=>l.length);
+  return head("Packages","Prices per industry, shown on the website and in new requests",ui.pkgEdit?"":`<button class="btn primary" data-act="pkgnew" type="button">New package</button>`)+
+  (ui.pkgEdit?pkgForm(ui.pkgEdit==="new"?null:S.packages.find(p=>String(p.id)===String(ui.pkgEdit))):"")+
+  (groups.length?groups.map(([n,l])=>`<div class="card"><h3>${esc(n)}</h3><div class="tablewrap"><table><thead><tr><th>Package</th><th>Price</th><th>Included</th><th>Status</th><th></th></tr></thead><tbody>${l.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="muted" style="font-size:13px">${esc(p.description)}</span></td><td class="num">${rupee(p.price)} <span class="muted">${PERIODS[p.period]||""}</span></td><td style="font-size:13px">${p.features.length} item${p.features.length===1?"":"s"}</td><td><span class="status s-${p.active?"Active":"Off"}">${p.active?"On website":"Hidden"}</span></td>
+  <td><div class="actions" style="flex-wrap:nowrap"><button class="btn small" data-act="pkgedit" data-arg="${p.id}" type="button">Edit</button><button class="btn small ghost" data-act="pkgtoggle" data-arg="${p.id}" type="button">${p.active?"Hide":"Show"}</button><button class="btn small ghost" data-act="pkgdel" data-arg="${p.id}" type="button">Delete</button></div></td></tr>`).join("")}</tbody></table></div></div>`).join("")
+  :`<div class="card"><div class="empty">No packages yet. Click <b>New package</b> to add the first one, for example "Growth" for Restaurants at $499 a month. Until then, clients see a "Get a quote" option.</div></div>`)};
+
+const PKG_ACTIONS={
+  homeniche:a=>{ui.homeNiche=a;render()},
+  pkgnew:()=>{ui.pkgEdit="new";render();window.scrollTo({top:0,behavior:"smooth"})},
+  pkgedit:a=>{ui.pkgEdit=a;render();window.scrollTo({top:0,behavior:"smooth"})},
+  pkgcancel:()=>{ui.pkgEdit=null;render()},
+  pkgtoggle:a=>{const p=S.packages.find(x=>String(x.id)===String(a));run(()=>q(sb.from("packages").update({active:!p.active}).eq("id",p.id)),p.active?p.name+" hidden from the website":p.name+" is on the website")},
+  pkgdel:(a,t)=>{if(!t.dataset.armed){t.dataset.armed=1;t.textContent="Click again";return}const p=S.packages.find(x=>String(x.id)===String(a));run(()=>q(sb.from("packages").delete().eq("id",p.id)),p.name+" deleted")}
+};
+const PKG_FORMS={
+  pkgsave:f=>{const E=m=>{$("#pkErr").textContent=m};const name=val("pk-name"),price=Number(val("pk-price"));
+    if(!name)return E("Give the package a name.");if(val("pk-price")===""||!(price>=0))return E("Enter a price in dollars, like 499.");
+    const row={niche:val("pk-niche"),name,price:Math.round(price),period:val("pk-period"),description:val("pk-desc")||null,features:val("pk-feat").split("\n").map(x=>x.trim()).filter(Boolean),active:$("#pk-active").checked,sort:+val("pk-sort")||0};
+    const id=f.dataset.arg;ui.pkgEdit=null;
+    return run(()=>q(id?sb.from("packages").update(row).eq("id",id):sb.from("packages").insert(row)),id?"Package saved":"Package added")}
+};
+
 /* ---- files ---- */
-const CHAT_MAX=10*1024*1024, BRAND_MAX=25*1024*1024;
+const CHAT_MAX=50*1024*1024, BRAND_MAX=25*1024*1024;
 const fmtSize=b=>b>=1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/1024))+" KB";
 const safeName=n=>n.replace(/[^\w.\-]+/g,"_").slice(-120);
 function brandFilesCard(biz,own){const files=S.brandfiles.filter(f=>f.biz===biz),staff=me()?.role==="employee";
@@ -1075,6 +1137,7 @@ function brandFilesInline(biz){const files=S.brandfiles.filter(f=>f.biz===biz);i
   return `<div class="actions" style="font-size:13px"><span class="muted">Brand files:</span>${files.map(f=>`<button class="btn small" data-act="openf" data-arg="brand-files::${esc(f.path)}" type="button">📄 ${esc(f.name)}</button>`).join("")}</div>`}
 
 const A={
+  ...PKG_ACTIONS,
   pushon:()=>enablePush(),
   pushoff:()=>disablePush(false),
   pushlater:()=>{try{localStorage.setItem(pushDismissKey(),"1")}catch(e){}render()},
@@ -1143,11 +1206,12 @@ const typeOptions=p=>(PLATFORM_TYPES[p]||["Post"]).map(t=>`<option>${t}</option>
 
 /* ---- change / input handlers ---- */
 const C={
-  msgfile:t=>{const f=t.files&&t.files[0];$("#msg-fname").textContent=f?(f.size>CHAT_MAX?"Too big (max 10 MB)":"📎 "+f.name):""},
+  msgfile:t=>{const f=t.files&&t.files[0];$("#msg-fname").textContent=f?(f.size>CHAT_MAX?"Too big (max 50 MB)":"📎 "+f.name):""},
   ptypes:t=>{$("#p-type").innerHTML=typeOptions(t.value)},
   dtypes:t=>{$("#d-type").innerHTML=typeOptions(t.value)},
   regrole:t=>{ui.regRole=t.value;$("#roleFields").innerHTML=roleFields(ui.regRole)},
-  pkg:t=>{$("#pkgDesc").textContent=PACKAGES[t.value].desc;if(PACKAGES[t.value].price)$("#q-budget").value=PACKAGES[t.value].price},
+  pkg:t=>{const p=S.packages.find(x=>String(x.id)===t.value);$("#pkgDesc").textContent=p?p.description:"Tell us your budget and what you need. Our team will send a quote.";if(p)$("#q-budget").value=p.price},
+  reqniche:t=>{$("#pkgOpts").innerHTML=pkgOptions(t.value);const p=activePkgs(t.value)[0];if(p)$("#q-budget").value=p.price},
   mkplat:t=>{ui.mkPlat=t.value;render()},
   mkmin:t=>{ui.mkMin=+t.value;render()},
   reqstage:t=>{ui.reqStage=t.value;render()},
@@ -1186,6 +1250,7 @@ function resetView(){return `<div class="wrap"><div class="card auth">
   <div class="err" id="nErr"></div><button class="btn primary" type="submit" style="width:100%">Save new password</button></form>
 </div></div>`}
 const F={
+  ...PKG_FORMS,
   forgot:async()=>{const email=val("f-email"),E=m=>{$("#fErr").textContent=m};
     if(!/^\S+@\S+\.\S+$/.test(email))return E("Enter a valid email, like you@example.com.");
     if(location.protocol==="file:")return E("Password reset links only work on the live website link, not on a file opened from your computer.");
@@ -1214,8 +1279,8 @@ const F={
     await startSession(data.user.id);toast("Account created");go("overview")},
   newreq:async()=>{const E=m=>{$("#qErr").textContent=m};const title=val("q-title"),budget=+val("q-budget");
     const plats=$$('input[name="plat"]:checked').map(x=>x.value),svcs=$$('input[name="svc"]:checked').map(x=>x.value);
-    if(!title)return E("Give the campaign a name.");if(!plats.length)return E("Pick at least one platform.");if(!svcs.length)return E("Pick at least one service.");if(!budget||budget<1000)return E("Enter a budget of ₹1,000 or more.");
-    let row;const ok=await run(async()=>{row=await q(sb.from("campaigns").insert({business_id:S.current,title,goal:val("q-goal")||null,audience:val("q-aud")||null,package:$('input[name="pkg"]:checked').value,platforms:plats,services:svcs,budget,deadline:val("q-deadline")||null,notes:val("q-notes")||null}).select("ref").single())},"Request submitted. Our team will assign a manager soon.");
+    if(!title)return E("Give the campaign a name.");if(!plats.length)return E("Pick at least one platform.");if(!svcs.length)return E("Pick at least one service.");if(!budget||budget<100)return E("Enter a budget of $100 or more.");
+    let row;const ok=await run(async()=>{row=await q(sb.from("campaigns").insert({business_id:S.current,title,goal:val("q-goal")||null,audience:val("q-aud")||null,package:(()=>{const v=$('input[name="pkg"]:checked')?.value;return v&&v!=="custom"?pkgLabel(S.packages.find(p=>String(p.id)===v)):"Custom"})(),platforms:plats,services:svcs,budget,deadline:val("q-deadline")||null,notes:val("q-notes")||null}).select("ref").single())},"Request submitted. Our team will assign a manager soon.");
     if(ok&&row)go("c-"+row.ref)},
   changes:f=>{const id=f.dataset.arg,t=val("fb-"+id);if(!t){$("#fb-"+id).focus();return toast("Write what should change first")}const d=S.drafts.find(x=>x.id===id);ui.changesFor=null;
     return run(()=>q(sb.from("drafts").update({status:"Changes",feedback:t}).eq("id",d.dbid)),"Feedback sent to "+(user(d.pro)?.name||"the manager"))},
@@ -1249,7 +1314,7 @@ const F={
   research:f=>{const r=req(f.dataset.arg);return run(()=>q(sb.from("campaigns").update({research:{audience:val("rs-a"),competitors:val("rs-c"),hashtags:val("rs-h")}}).eq("id",r.dbid)),"Research brief saved")},
   brandkit:()=>run(()=>q(sb.from("brand_kits").upsert({business_id:S.current,tone:val("bk-tone"),colors:[0,1,2].map(i=>$("#bk-c"+i).value),hashtags:val("bk-tags"),audience:val("bk-aud"),dos:val("bk-dos"),donts:val("bk-donts"),updated_at:new Date().toISOString()})),"Brand kit saved"),
   msg:async()=>{const t=val("msg-in"),file=$("#msg-file")?.files?.[0];if(!t&&!file)return;const r=req(ui.thread);
-    if(file&&file.size>CHAT_MAX){toast("That file is over 10 MB. Share a link instead.");return}
+    if(file&&file.size>CHAT_MAX){toast("That file is over 50 MB. Share a Google Drive link in the chat instead.");return}
     let row={campaign_id:r.dbid,sender_id:S.current,body:t};
     if(file){$("#msg-fname").textContent="Uploading "+file.name+"…";const path=`${r.dbid}/${Date.now()}-${safeName(file.name)}`;
       const {error}=await sb.storage.from("chat-files").upload(path,file,{contentType:file.type||"application/octet-stream"});
@@ -1293,6 +1358,7 @@ async function boot(){
   $("#app").innerHTML=`<div class="wrap"><div class="empty" style="margin:60px auto;max-width:420px">Loading BrandBay…</div></div>`;
   sb.auth.onAuthStateChange(ev=>{if(ev==="PASSWORD_RECOVERY")go("reset");else if(ev==="SIGNED_OUT"&&S.current){stopLive();S=blank();profile=null;render()}});
   try{const {data:{session}}=await sb.auth.getSession();
+    if(!session)await loadPackages();
     if(session){try{await startSession(session.user.id)}catch(e){console.error(e);await sb.auth.signOut();S=blank();profile=null}}
   }catch(e){console.error(e);toast(friendly(e))}
   booted=true;
