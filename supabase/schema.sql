@@ -648,3 +648,183 @@ begin
   perform notify(array[i.business_id], 'Reminder: INV-' || i.id || ' for ₹' || to_char(i.amount, 'FM9,999,999') ||
     ' is due on ' || to_char(i.due, 'DD Mon') || '.', 'billing');
 end $$;
+-- BrandBay update 003: each platform has its own post types (YouTube Video/Short, X Thread, Google Business Offer, ...).
+alter table public.posts  drop constraint if exists posts_type_check;
+alter table public.drafts drop constraint if exists drafts_type_check;
+alter table public.posts  add constraint posts_type_check  check (type in ('Post','Carousel','Reel','Story','Video','Short','Thread','Update','Offer','Event','Ad','Status','Broadcast'));
+alter table public.drafts add constraint drafts_type_check check (type in ('Post','Carousel','Reel','Story','Video','Short','Thread','Update','Offer','Event','Ad','Status','Broadcast'));
+-- BrandBay update 004: file uploads in chat (10 MB) and the brand kit (25 MB).
+
+-- 1. Chat messages can carry a file (and the text becomes optional when they do)
+alter table public.messages add column if not exists file_path text;
+alter table public.messages add column if not exists file_name text;
+alter table public.messages add column if not exists file_size integer;
+alter table public.messages alter column body set default '';
+alter table public.messages drop constraint if exists messages_body_check;
+alter table public.messages drop constraint if exists messages_content_check;
+alter table public.messages add constraint messages_content_check
+  check (length(body) <= 4000 and (length(body) > 0 or file_path is not null));
+
+-- 2. Brand kit files (logo, guidelines, photos, fonts)
+create table if not exists public.brand_files (
+  id          bigint generated always as identity primary key,
+  business_id uuid not null references public.profiles(id) on delete cascade,
+  path        text not null unique,
+  name        text not null,
+  size        integer not null,
+  uploaded_by uuid not null references public.profiles(id),
+  created_at  timestamptz not null default now()
+);
+
+-- Who may see a business's brand material: the business, the team, its managers, and influencers it booked.
+create or replace function public.can_see_brand(biz uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select auth.uid() = biz or is_staff()
+      or exists(select 1 from campaigns c where c.business_id = biz and c.manager_id = auth.uid())
+      or exists(select 1 from bookings b where b.business_id = biz and b.influencer_id = auth.uid()
+                and b.status not in ('Declined','Cancelled'));
+$$;
+
+alter table public.brand_files enable row level security;
+drop policy if exists "brand files visible to the right people" on public.brand_files;
+drop policy if exists "business adds its own brand files" on public.brand_files;
+drop policy if exists "business or team removes brand files" on public.brand_files;
+create policy "brand files visible to the right people" on public.brand_files for select using (can_see_brand(business_id));
+create policy "business adds its own brand files" on public.brand_files for insert
+  with check (business_id = auth.uid() and uploaded_by = auth.uid() and my_role() = 'business');
+create policy "business or team removes brand files" on public.brand_files for delete
+  using (business_id = auth.uid() or is_staff());
+create index if not exists brand_files_business_idx on public.brand_files (business_id);
+
+-- 3. Private storage areas with size limits enforced by Supabase itself
+insert into storage.buckets (id, name, public, file_size_limit)
+  values ('chat-files', 'chat-files', false, 10485760), ('brand-files', 'brand-files', false, 26214400)
+  on conflict (id) do update set file_size_limit = excluded.file_size_limit, public = false;
+
+-- chat-files/<campaign id>/<file>   : campaign members only
+drop policy if exists "campaign members upload chat files" on storage.objects;
+drop policy if exists "campaign members open chat files" on storage.objects;
+create policy "campaign members upload chat files" on storage.objects for insert to authenticated
+  with check (bucket_id = 'chat-files' and (storage.foldername(name))[1] ~ '^[0-9]+$'
+              and public.is_member(((storage.foldername(name))[1])::bigint));
+create policy "campaign members open chat files" on storage.objects for select to authenticated
+  using (bucket_id = 'chat-files' and (storage.foldername(name))[1] ~ '^[0-9]+$'
+         and public.is_member(((storage.foldername(name))[1])::bigint));
+
+-- brand-files/<business id>/<file>  : the business uploads; the right people can open
+drop policy if exists "business uploads brand files" on storage.objects;
+drop policy if exists "right people open brand files" on storage.objects;
+drop policy if exists "business removes brand files" on storage.objects;
+create policy "business uploads brand files" on storage.objects for insert to authenticated
+  with check (bucket_id = 'brand-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "right people open brand files" on storage.objects for select to authenticated
+  using (bucket_id = 'brand-files' and (storage.foldername(name))[1] ~ '^[0-9a-f-]{36}$'
+         and public.can_see_brand(((storage.foldername(name))[1])::uuid));
+create policy "business removes brand files" on storage.objects for delete to authenticated
+  using (bucket_id = 'brand-files' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_staff()));
+
+-- 4. Chat notifications mention the file when there's no text
+create or replace function public.on_message() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare c campaigns;
+begin
+  select * into c from campaigns where id = new.campaign_id;
+  perform notify(array[c.business_id, c.manager_id] || staff_ids(),
+    profile_name(new.sender_id) || ' in ' || c.title || ': ' ||
+    case when coalesce(new.body,'') = '' then '📎 ' || coalesce(new.file_name,'a file') else left(new.body, 60) end, 'messages');
+  return new;
+end $$;
+
+-- 5. Live updates for brand files
+do $$ begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'brand_files') then
+    alter publication supabase_realtime add table public.brand_files;
+  end if;
+end $$;
+
+-- 6. Fix: changes made by an admin in the SQL Editor (no signed-in user) are logged as "BrandBay team"
+create or replace function public.profile_name(uid uuid) returns text
+language sql stable security definer set search_path = public as $$
+  select coalesce((select coalesce(company, name) from profiles where id = uid), 'BrandBay team');
+$$;
+-- BrandBay update 006: chat files can be up to 50 MB (the free plan's maximum).
+update storage.buckets set file_size_limit = 52428800 where id = 'chat-files';
+
+-- BrandBay update 007: prices in US dollars, and packages per industry managed by the team.
+
+-- 1. Packages
+create table if not exists public.packages (
+  id          bigint generated always as identity primary key,
+  niche       text not null,
+  name        text not null,
+  price       integer not null check (price >= 0),
+  period      text not null default 'month' check (period in ('month','once')),
+  description text,
+  features    text[] not null default '{}',
+  active      boolean not null default true,
+  sort        integer not null default 0,
+  created_at  timestamptz not null default now()
+);
+alter table public.packages enable row level security;
+drop policy if exists "anyone sees packages on the website" on public.packages;
+drop policy if exists "team sees all packages" on public.packages;
+drop policy if exists "team manages packages" on public.packages;
+create policy "anyone sees packages on the website" on public.packages for select using (active);
+create policy "team sees all packages" on public.packages for select using (is_staff());
+create policy "team manages packages" on public.packages for all using (is_staff()) with check (is_staff());
+grant select on public.packages to anon;
+
+-- 2. Budgets in dollars: minimum $100
+alter table public.campaigns drop constraint if exists campaigns_budget_check;
+alter table public.campaigns add constraint campaigns_budget_check check (budget >= 100);
+
+-- 3. Notifications show $ instead of ₹
+create or replace function public.on_invoice() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'Paid' and old.status <> 'Paid' then
+    new.paid_at := now();
+    perform notify(array[new.business_id], 'Payment received for INV-' || new.id || ' ($' || to_char(new.amount, 'FM9,999,999') || '). Thank you!', 'billing');
+    perform log(new.campaign_id, 'INV-' || new.id || ' marked as paid');
+  end if;
+  return new;
+end $$;
+
+create or replace function public.on_booking() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare who text := profile_name(new.influencer_id); biz text := profile_name(new.business_id);
+        others uuid[] := array[new.business_id, new.booked_by] || staff_ids();
+begin
+  if tg_op = 'INSERT' then
+    perform notify(array[new.influencer_id],
+      'New shoot from ' || biz || ' (' || new.deliverable || '): please come on ' || to_char(new.shoot_date, 'Dy, DD Mon') ||
+      ' at ' || to_char(new.shoot_time, 'HH24:MI') || '. 📍 ' || new.location ||
+      '. Fee $' || to_char(new.fee, 'FM9,999,999') || '.', 'bookings');
+    perform notify(others, profile_name(new.booked_by) || ' booked ' || who || ' for ' || new.deliverable || ' on ' || to_char(new.shoot_date, 'DD Mon'), 'influencers');
+    perform log(new.campaign_id, profile_name(new.booked_by) || ' booked ' || who || ' for ' || biz || ' (' || new.ref || ')');
+  elsif new.status is distinct from old.status then
+    case new.status
+      when 'Accepted' then perform notify(others, who || ' accepted the shoot on ' || to_char(new.shoot_date, 'DD Mon') || ' at ' || to_char(new.shoot_time,'HH24:MI'), 'influencers');
+      when 'Declined' then perform notify(others, who || ' declined the shoot on ' || to_char(new.shoot_date, 'DD Mon') || '. Try booking another influencer.', 'influencers');
+      when 'Uploaded' then perform notify(others, who || ' uploaded the ' || new.deliverable || ' for ' || biz || '. Please review it.', 'influencers');
+      when 'Approved' then perform notify(array[new.influencer_id], biz || ' approved your ' || new.deliverable || '. $' || to_char(new.fee, 'FM9,999,999') || ' will be released.', 'earnings');
+      when 'Reshoot'  then perform notify(array[new.influencer_id], biz || ' asked for changes on your ' || new.deliverable || ': ' || coalesce(new.feedback,''), 'bookings');
+      when 'Cancelled' then perform notify(array[new.influencer_id], biz || ' cancelled the shoot on ' || to_char(new.shoot_date, 'DD Mon'), 'bookings');
+      else null;
+    end case;
+    perform log(new.campaign_id, profile_name(auth.uid()) || ' set ' || new.ref || ' to ' || new.status);
+  end if;
+  return new;
+end $$;
+
+create or replace function public.remind_invoice(iid bigint) returns void
+language plpgsql security definer set search_path = public as $$
+declare i invoices;
+begin
+  if not is_staff() then raise exception 'Only the BrandBay team can send payment reminders'; end if;
+  select * into i from invoices where id = iid;
+  if i.id is null then raise exception 'Invoice not found'; end if;
+  perform notify(array[i.business_id], 'Reminder: INV-' || i.id || ' for $' || to_char(i.amount, 'FM9,999,999') ||
+    ' is due on ' || to_char(i.due, 'DD Mon') || '.', 'billing');
+end $$;
